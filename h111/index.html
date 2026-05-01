@@ -197,7 +197,6 @@
         <div class="progress-bar"><div id="sb-progress-fill" class="progress-fill"></div></div>
         <p id="sb-progress-text" style="font-size: 0.9rem; color: #555; text-align: center; font-weight: bold;"></p>
         
-        <!-- Top 10에서 전체 목록으로 변경 -->
         <h3>🔥 누적 오답 노트 (전체)</h3>
         <ul id="sb-stat-list" class="stat-list sb-stat-list"></ul>
 
@@ -237,8 +236,9 @@
     const data = {
         "고구려-태조왕": ["옥저 정복", "계루부 고씨 왕위 독점", "요동 진출"],
         "고구려-고국천왕": ["부족적 5부 → 행정적 5부", "진대법 실시 (을파소 건의)", "부자상속 확립"],
-        "고구려-미천왕": ["낙랑 축출", "대동강 유역 확보", "요동 진출"],
-        "고구려-소수림왕": ["율령 반포", "불교 수용 (전진)", "태학 설립 (관학, 상류층 대상)"],
+        // 여기서 미천왕의 요동 진출이 삭제되었습니다
+        "고구려-미천왕": ["낙랑 축출", "대동강 유역 확보"],
+        "고구려-소수림왕": ["율령 반포", "불교 수용 (전진)", "태학 설립 (관학, 상류층 대상)", "10여 관등 정비"],
         "고구려-광개토대왕": ["만주 장악", "신라 왜구 격퇴", "한강 이북 차지", "'영락' 연호 사용"],
         "고구려-장수왕": ["평양성 천도 (427)", "한강 차지 (475, 남진정책)", "충주고구려비 (중원고구려비) 건립", "중국 남북조와 교류"],
         "백제-고이왕": ["한강 유역 확보", "공복 제정", "16관등 정비", "목지국 병합"],
@@ -246,8 +246,8 @@
         "백제-침류왕": ["불교 공인 (동진)"],
         "백제-개로왕": ["한강 상실 (~475)"],
         "백제-무령왕": ["웅진 천도 이후 국력 회복", "중국 남조와 교류", "22담로 설치 (왕족 파견, 지방 통제)", "무령왕릉 (벽돌무덤)"],
-        "백제-성왕": ["사비 천도", "국호 남부여", "한강 일시 차지 (진흥왕에게 빼앗김)", "중앙관청 22부 설치", "관산성 전투에서 전사"],
-        "신라-내물왕": ["왕호 마립간 사용", "김씨 왕위 세습 확립", "고구려 광개토대왕에 SOS 요청 (왜군 격퇴)", "호우명 그릇"],
+        "백제-성왕": ["사비 천도", "국호 남부여", "한강 일시 차지 (진흥왕에게 빼앗김)", "중앙관청 22부 설치", "관산성 전투에서 전사", "수도 5부 정비"],
+        "신라-내물왕": ["왕호 마립간 사용", "김씨 왕위 세습 확립", "고구려 광개토대왕에 SOS 요청 (왜군 격퇴)", "호우명 그릇", "진한 소국 병합"],
         "신라-지증왕": ["왕호 '왕', 국호 '신라' 확정", "우산국 정복 (이사부)", "우경 시작", "순장 폐지"],
         "신라-법흥왕": ["병부 설치 (군사 관할)", "상대등 설치 (화백회의 주재)", "율령 제정", "불교 수용 (이차돈 순교)", "골품제 정비", "17관등 정비", "금관가야 병합"],
         "신라-진흥왕": ["한강 차지", "화랑 제도 개편", "대가야 병합", "황룡사 건축 (9층 목탑, 선덕여왕 때 완공)", "단양 신라 적성비 외 4개 순수비 건립"]
@@ -398,7 +398,6 @@
         if (sortedStats.length === 0) {
             statList.innerHTML = "<li><span style='color: #27ae60; font-weight: bold;'>아직 틀린 문제가 없습니다. 완벽해요! 👍</span></li>";
         } else {
-            // slice 없이 전체 렌더링
             sortedStats.forEach(stat => {
                 const li = document.createElement('li');
                 li.innerHTML = `<span>${stat.text}</span> <span class="badge">${stat.count}회</span>`;
@@ -499,7 +498,6 @@
         if (sortedStats.length === 0) {
             statList.innerHTML = "<li>👏 완벽합니다! 누적된 틀린 기록이 없습니다!</li>";
         } else {
-            // slice 없이 전체 렌더링
             sortedStats.forEach(stat => {
                 const li = document.createElement('li');
                 li.innerHTML = `<span>${stat.text}</span> <span class="badge">${stat.count}회 틀림</span>`;
@@ -509,12 +507,21 @@
     }
 
     window.onload = () => {
+        // 기존 큐에서 삭제된 '요동 진출'이 남아있으면 버그가 생길 수 있으므로
+        // 미천왕의 요동 진출 데이터가 localStorage에 있으면 초기화시키는 로직 추가
+        const savedQueue = localStorage.getItem('quiz_queue');
+        if (savedQueue && savedQueue.includes('"achievement":"요동 진출"') && savedQueue.includes('"king":"고구려-미천왕"')) {
+            console.log("기존 데이터 업데이트 감지. 큐를 초기화합니다.");
+            localStorage.removeItem('quiz_queue');
+            localStorage.removeItem('quiz_initialTotal');
+        }
+
         const savedStats = localStorage.getItem('quiz_mistakeStats');
         if (savedStats) mistakeStats = JSON.parse(savedStats);
 
-        const savedQueue = localStorage.getItem('quiz_queue');
-        if (savedQueue) {
-            questionQueue = JSON.parse(savedQueue);
+        const currentQueue = localStorage.getItem('quiz_queue');
+        if (currentQueue) {
+            questionQueue = JSON.parse(currentQueue);
             initialTotalQuestions = parseInt(localStorage.getItem('quiz_initialTotal')) || questionQueue.length;
             
             if (questionQueue.length > 0) {
