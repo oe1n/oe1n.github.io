@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>삼국시대 왕 업적 마스터 퀴즈</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        /* 메인 컨테이너 */
+        .quiz-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        /* 프로그레스 바 */
+        .progress-bar {
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            height: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background-color: #3498db;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        /* 퀴즈 UI */
+        .question-box {
+            background-color: #eaf2f8;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #2980b9;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        button.option-btn {
+            padding: 15px;
+            font-size: 1rem;
+            background-color: #fff;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button.option-btn:hover {
+            border-color: #3498db;
+            background-color: #f7f9fa;
+        }
+        button.option-btn.correct { background-color: #2ecc71; color: white; border-color: #2ecc71; }
+        button.option-btn.wrong { background-color: #e74c3c; color: white; border-color: #e74c3c; }
+        
+        .result-msg {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        #next-btn, #restart-btn {
+            margin-top: 20px;
+            padding: 12px 25px;
+            font-size: 1rem;
+            background-color: #34495e;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none;
+            font-weight: bold;
+        }
+        #next-btn:hover, #restart-btn:hover { background-color: #2c3e50; }
+        
+        /* 최종 화면 및 통계 리스트 */
+        #final-screen { display: none; }
+        .stat-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .stat-box h3 { margin-top: 0; color: #856404; font-size: 1.1rem; }
+        .stat-list { list-style-type: none; padding: 0; margin: 0; }
+        .stat-list li {
+            padding: 8px 0; border-bottom: 1px dashed #ffeeba; color: #555;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.9rem;
+        }
+        .stat-list li:last-child { border-bottom: none; }
+        .badge {
+            background-color: #e74c3c; color: white; padding: 3px 8px;
+            border-radius: 12px; font-size: 0.8rem; margin-left: 10px; font-weight: bold;
+            white-space: nowrap;
+        }
+
+        /* 사이드바 UI */
+        #sidebar-toggle {
+            position: fixed; top: 20px; right: 20px; padding: 12px 18px;
+            background: #3498db; color: white; border: none; border-radius: 8px;
+            cursor: pointer; font-weight: bold; font-size: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); z-index: 900; transition: background 0.3s;
+        }
+        #sidebar-toggle:hover { background: #2980b9; }
+        
+        .sidebar {
+            position: fixed; top: 0; right: -320px; width: 320px; height: 100vh;
+            background: #fff; box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+            transition: right 0.3s ease-in-out; z-index: 1000;
+            display: flex; flex-direction: column;
+        }
+        .sidebar.open { right: 0; }
+        
+        .sidebar-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px; background: #2c3e50; color: white;
+        }
+        .sidebar-header h2 { margin: 0; font-size: 1.2rem; }
+        .close-btn { background: none; border: none; color: white; font-size: 1.8rem; cursor: pointer; }
+        
+        .sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
+        .sidebar-content h3 { font-size: 1rem; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; color: #2c3e50; }
+        .sb-stat-list { margin-bottom: 30px; }
+        .sb-stat-list li { border-bottom: 1px dashed #ecf0f1; }
+        
+        .danger-btn {
+            width: 100%; padding: 12px; margin-top: 20px; font-weight: bold;
+            background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer;
+        }
+        .danger-btn:hover { background-color: #c0392b; }
+    </style>
+</head>
+<body>
+
+<!-- 우측 상단 사이드바 토글 버튼 -->
+<button id="sidebar-toggle" onclick="toggleSidebar()">📊 학습 현황</button>
+
+<!-- 사이드바 패널 -->
+<div id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+        <h2>📊 실시간 현황 및 기록</h2>
+        <button class="close-btn" onclick="toggleSidebar()">&times;</button>
+    </div>
+    <div class="sidebar-content">
+        <h3>진행 상황 (현재 큐)</h3>
+        <div class="progress-bar"><div id="sb-progress-fill" class="progress-fill"></div></div>
+        <p id="sb-progress-text" style="font-size: 0.9rem; color: #555; text-align: center; font-weight: bold;"></p>
+        
+        <h3>🔥 누적 오답 노트 (Top 10)</h3>
+        <ul id="sb-stat-list" class="stat-list sb-stat-list"></ul>
+
+        <button class="danger-btn" onclick="resetAllData()">데이터 완전 초기화 (새로 시작)</button>
+    </div>
+</div>
+
+<div class="quiz-container">
+    <h1>👑 삼국시대 왕 업적 퀴즈</h1>
+    
+    <div id="quiz-screen">
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        <div id="progress-text" class="progress-text">남은 문제 계산 중...</div>
+        
+        <div id="question" class="question-box">업적 로딩 중...</div>
+        <div id="options" class="options-grid"></div>
+        <div id="result" class="result-msg"></div>
+        <button id="next-btn" onclick="showNextQuestion()">다음 문제 ➔</button>
+    </div>
+
+    <div id="final-screen">
+        <h2>🎉 모든 업적을 마스터하셨습니다!</h2>
+        <p>포기하지 않고 끝까지 완료한 것을 축하합니다.</p>
+        
+        <div class="stat-box" id="stat-box">
+            <h3>📊 나의 취약점 분석 (누적 기록)</h3>
+            <ul id="stat-list" class="stat-list">
+            </ul>
+        </div>
+        
+        <button id="restart-btn" style="display: inline-block;" onclick="startGame(true)">처음부터 다시 도전 ➔</button>
+    </div>
+</div>
+
+<script>
+    const data = {
+        "고구려-태조왕": ["옥저 정복", "계루부 고씨 왕위 독점", "요동 진출"],
+        "고구려-고국천왕": ["부족적 5부 → 행정적 5부", "진대법 실시 (을파소 건의)", "부자상속 확립"],
+        "고구려-미천왕": ["낙랑 축출", "대동강 유역 확보", "요동 진출"],
+        "고구려-소수림왕": ["율령 반포", "불교 수용 (전진)", "태학 설립 (관학, 상류층 대상)"],
+        "고구려-광개토대왕": ["만주 장악", "신라 왜구 격퇴", "한강 이북 차지", "'영락' 연호 사용"],
+        "고구려-장수왕": ["평양성 천도 (427)", "한강 차지 (475, 남진정책)", "충주고구려비 (중원고구려비) 건립", "중국 남북조와 교류"],
+        "백제-고이왕": ["한강 유역 확보", "공복 제정", "16관등 정비", "목지국 병합"],
+        "백제-근초고왕": ["왕위 부자상속 확립", "마한 복속", "산둥·요서·규슈 진출", "평양성 침략 (고국원왕 사망)"],
+        "백제-침류왕": ["불교 공인 (동진)"],
+        "백제-개로왕": ["한강 상실 (~475)"],
+        "백제-무령왕": ["웅진 천도 이후 국력 회복", "중국 남조와 교류", "22담로 설치 (왕족 파견, 지방 통제)", "무령왕릉 (벽돌무덤)"],
+        "백제-성왕": ["사비 천도", "국호 남부여", "한강 일시 차지 (진흥왕에게 빼앗김)", "중앙관청 22부 설치", "관산성 전투에서 전사"],
+        "신라-내물왕": ["왕호 마립간 사용", "김씨 왕위 세습 확립", "고구려 광개토대왕에 SOS 요청 (왜군 격퇴)", "호우명 그릇"],
+        "신라-지증왕": ["왕호 '왕', 국호 '신라' 확정", "우산국 정복 (이사부)", "우경 시작", "순장 폐지"],
+        "신라-법흥왕": ["병부 설치 (군사 관할)", "상대등 설치 (화백회의 주재)", "율령 제정", "불교 수용 (이차돈 순교)", "골품제 정비", "17관등 정비", "금관가야 병합"],
+        "신라-진흥왕": ["한강 차지", "화랑 제도 개편", "대가야 병합", "황룡사 건축 (9층 목탑, 선덕여왕 때 완공)", "단양 신라 적성비 외 4개 순수비 건립"]
+    };
+
+    const conflictKeywords = ["한강", "불교", "낙랑", "5부", "천도", "율령", "관등", "부자상속", "요동"];
+    
+    let questionQueue = [];
+    let initialTotalQuestions = 0;
+    let currentQuestion = null;
+    let isAnswered = false;
+    let mistakeStats = {}; // 누적 오답 기록
+
+    // 사이드바 토글 기능
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('open');
+        updateSidebarUI();
+    }
+
+    // 로컬 스토리지에 진행 상태 저장
+    function saveProgress() {
+        // 누적 오답 기록 저장
+        localStorage.setItem('quiz_mistakeStats', JSON.stringify(mistakeStats));
+        
+        let queueToSave = [];
+        // 화면에 떠있으나 아직 풀지 않은 문제가 있다면 맨 앞에 보관
+        if (currentQuestion && !isAnswered) {
+            queueToSave.push(currentQuestion);
+        }
+        queueToSave = queueToSave.concat(questionQueue);
+        
+        if (queueToSave.length > 0) {
+            localStorage.setItem('quiz_queue', JSON.stringify(queueToSave));
+            localStorage.setItem('quiz_initialTotal', initialTotalQuestions.toString());
+        } else {
+            // 다 푼 경우 큐 초기화
+            localStorage.removeItem('quiz_queue');
+            localStorage.removeItem('quiz_initialTotal');
+        }
+    }
+
+    // 완전 초기화
+    function resetAllData() {
+        if(confirm("모든 학습 진행 상황과 누적 오답 기록을 삭제하시겠습니까? (이 작업은 되돌릴 수 없습니다.)")) {
+            localStorage.removeItem('quiz_queue');
+            localStorage.removeItem('quiz_initialTotal');
+            localStorage.removeItem('quiz_mistakeStats');
+            mistakeStats = {};
+            toggleSidebar(); // 사이드바 닫기
+            startGame(true); // 새 게임 시작
+        }
+    }
+
+    // 게임 시작 및 불러오기 통합 함수
+    function startGame(forceNew = false) {
+        document.getElementById('quiz-screen').style.display = 'block';
+        document.getElementById('final-screen').style.display = 'none';
+
+        if (forceNew) {
+            questionQueue = [];
+            const kings = Object.keys(data);
+            kings.forEach(king => {
+                data[king].forEach(ach => {
+                    questionQueue.push({ king: king, achievement: ach });
+                });
+            });
+            questionQueue.sort(() => 0.5 - Math.random());
+            initialTotalQuestions = questionQueue.length;
+            localStorage.removeItem('quiz_queue');
+        }
+        
+        showNextQuestion();
+    }
+
+    // 헷갈리는 오답 방지 선택지 생성
+    function generateOptions(correctKing, targetAchievement) {
+        const kings = Object.keys(data);
+        let wrongPool = [];
+        
+        for (const king of kings) {
+            if (king === correctKing) continue;
+            let isConfusing = false;
+            const otherAchievements = data[king];
+            
+            if (otherAchievements.includes(targetAchievement)) isConfusing = true;
+            
+            for (const keyword of conflictKeywords) {
+                if (targetAchievement.includes(keyword)) {
+                    for (const otherAch of otherAchievements) {
+                        if (otherAch.includes(keyword)) {
+                            isConfusing = true;
+                            break;
+                        }
+                    }
+                }
+                if (isConfusing) break;
+            }
+            if (!isConfusing) wrongPool.push(king);
+        }
+
+        wrongPool.sort(() => 0.5 - Math.random());
+        let options = wrongPool.slice(0, 7);
+
+        if (options.length < 7) {
+            let remaining = kings.filter(k => k !== correctKing && !options.includes(k));
+            remaining.sort(() => 0.5 - Math.random());
+            options = options.concat(remaining.slice(0, 7 - options.length));
+        }
+
+        options.push(correctKing);
+        options.sort(() => 0.5 - Math.random());
+        return options;
+    }
+
+    // 메인화면과 사이드바 동시 렌더링 업데이트
+    function updateSidebarUI() {
+        // 메인 & 사이드바 프로그레스 업데이트
+        const remaining = isAnswered ? questionQueue.length : questionQueue.length + 1;
+        const total = initialTotalQuestions || 1;
+        const solved = total - remaining + (isAnswered ? 1 : 0);
+        let progressPercent = (solved / total) * 100;
+        if(progressPercent > 100) progressPercent = 100;
+
+        document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+        document.getElementById('sb-progress-fill').style.width = `${progressPercent}%`;
+        
+        if (remaining > total) {
+            document.getElementById('progress-text').innerText = `오답 복습 중... (현재 대기열: ${remaining}문제)`;
+            document.getElementById('sb-progress-text').innerText = `오답 복습 중... (현재 대기열: ${remaining}문제)`;
+        } else {
+            document.getElementById('progress-text').innerText = `진행률: ${solved} / ${total} (남은 문제: ${remaining}개)`;
+            document.getElementById('sb-progress-text').innerText = `진행률: ${solved} / ${total} (남은 문제: ${remaining}개)`;
+        }
+
+        // 사이드바 오답 통계 업데이트
+        const statList = document.getElementById('sb-stat-list');
+        statList.innerHTML = "";
+        
+        const sortedStats = Object.keys(mistakeStats).map(key => {
+            return { text: key, count: mistakeStats[key] };
+        }).sort((a, b) => b.count - a.count);
+
+        if (sortedStats.length === 0) {
+            statList.innerHTML = "<li><span style='color: #27ae60; font-weight: bold;'>아직 틀린 문제가 없습니다. 완벽해요! 👍</span></li>";
+        } else {
+            const topStats = sortedStats.slice(0, 10);
+            topStats.forEach(stat => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${stat.text}</span> <span class="badge">${stat.count}회</span>`;
+                statList.appendChild(li);
+            });
+        }
+    }
+
+    // 다음 문제 출력
+    function showNextQuestion() {
+        if (questionQueue.length === 0) {
+            saveProgress(); // 큐 빈 상태 저장
+            showFinalScreen();
+            return;
+        }
+
+        isAnswered = false;
+        document.getElementById('result').innerText = "";
+        document.getElementById('next-btn').style.display = "none";
+        
+        currentQuestion = questionQueue.shift();
+        
+        saveProgress(); // 새 문제 뽑은 상태 즉시 저장 (새로고침 대응)
+        updateSidebarUI();
+
+        document.getElementById('question').innerText = "Q. " + currentQuestion.achievement;
+
+        const options = generateOptions(currentQuestion.king, currentQuestion.achievement);
+        const optionsContainer = document.getElementById('options');
+        optionsContainer.innerHTML = "";
+        
+        options.forEach(option => {
+            const btn = document.createElement('button');
+            btn.className = "option-btn";
+            btn.innerText = option;
+            btn.onclick = () => checkAnswer(btn, option);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    // 정답 체크
+    function checkAnswer(btn, selectedOption) {
+        if (isAnswered) return;
+        isAnswered = true;
+
+        const resultDiv = document.getElementById('result');
+        const nextBtn = document.getElementById('next-btn');
+
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(b => {
+            if (b.innerText === currentQuestion.king) {
+                b.classList.add('correct');
+            } else {
+                b.style.opacity = "0.5";
+            }
+        });
+
+        if (selectedOption === currentQuestion.king) {
+            resultDiv.innerText = "🎉 정답입니다!";
+            resultDiv.style.color = "#2ecc71";
+        } else {
+            btn.classList.add('wrong');
+            btn.style.opacity = "1";
+            resultDiv.innerText = `❌ 오답입니다. 정답은 [${currentQuestion.king}] 입니다.\n이 문제는 큐에 다시 추가됩니다!`;
+            resultDiv.style.color = "#e74c3c";
+            
+            // 통계 기록 누적
+            const statKey = `[${currentQuestion.king}] ${currentQuestion.achievement}`;
+            mistakeStats[statKey] = (mistakeStats[statKey] || 0) + 1;
+            
+            // 오답 복습을 위해 랜덤한 위치에 삽입
+            const insertIndex = Math.floor(Math.random() * questionQueue.length);
+            questionQueue.splice(insertIndex, 0, currentQuestion);
+        }
+
+        saveProgress(); // 오답 기록 및 큐 변화 저장
+        updateSidebarUI();
+        nextBtn.style.display = "inline-block";
+    }
+
+    // 완료 화면
+    function showFinalScreen() {
+        document.getElementById('quiz-screen').style.display = 'none';
+        document.getElementById('final-screen').style.display = 'block';
+        
+        const statList = document.getElementById('stat-list');
+        statList.innerHTML = "";
+        
+        const sortedStats = Object.keys(mistakeStats).map(key => {
+            return { text: key, count: mistakeStats[key] };
+        }).sort((a, b) => b.count - a.count);
+
+        if (sortedStats.length === 0) {
+            statList.innerHTML = "<li>👏 완벽합니다! 누적된 틀린 기록이 없습니다!</li>";
+        } else {
+            const topStats = sortedStats.slice(0, 10);
+            topStats.forEach(stat => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${stat.text}</span> <span class="badge">${stat.count}회 틀림</span>`;
+                statList.appendChild(li);
+            });
+        }
+    }
+
+    // 페이지 로드 시 기존 데이터 스캔 및 시작
+    window.onload = () => {
+        // 저장된 통계 불러오기
+        const savedStats = localStorage.getItem('quiz_mistakeStats');
+        if (savedStats) mistakeStats = JSON.parse(savedStats);
+
+        // 진행중이던 큐 불러오기
+        const savedQueue = localStorage.getItem('quiz_queue');
+        if (savedQueue) {
+            questionQueue = JSON.parse(savedQueue);
+            initialTotalQuestions = parseInt(localStorage.getItem('quiz_initialTotal')) || questionQueue.length;
+            
+            if (questionQueue.length > 0) {
+                startGame(false); // 기존 데이터로 이어하기
+                return;
+            }
+        }
+        
+        // 기존 큐가 없으면 새 게임
+        startGame(true); 
+    };
+</script>
+
+</body>
+</html>
