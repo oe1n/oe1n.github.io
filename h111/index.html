@@ -197,7 +197,8 @@
         <div class="progress-bar"><div id="sb-progress-fill" class="progress-fill"></div></div>
         <p id="sb-progress-text" style="font-size: 0.9rem; color: #555; text-align: center; font-weight: bold;"></p>
         
-        <h3>🔥 누적 오답 노트 (Top 10)</h3>
+        <!-- Top 10에서 전체 목록으로 변경 -->
+        <h3>🔥 누적 오답 노트 (전체)</h3>
         <ul id="sb-stat-list" class="stat-list sb-stat-list"></ul>
 
         <button class="danger-btn" onclick="resetAllData()">데이터 완전 초기화 (새로 시작)</button>
@@ -223,7 +224,7 @@
         <p>포기하지 않고 끝까지 완료한 것을 축하합니다.</p>
         
         <div class="stat-box" id="stat-box">
-            <h3>📊 나의 취약점 분석 (누적 기록)</h3>
+            <h3>📊 나의 취약점 분석 (누적 전체 기록)</h3>
             <ul id="stat-list" class="stat-list">
             </ul>
         </div>
@@ -315,23 +316,19 @@
         showNextQuestion();
     }
 
-    // 🔥 함정 선택지 생성 로직 대폭 강화 🔥
     function generateOptions(correctKing, targetAchievement) {
         const countries = ["고구려", "백제", "신라"];
         const realKeys = Object.keys(data);
         
-        // 모든 왕 이름만 추출 (예: '고국천왕', '진흥왕' 등 중복 제거)
         const allKingNames = [...new Set(realKeys.map(k => k.split('-')[1]))];
         const [c_country, c_name] = correctKing.split('-');
         
-        let wrongPool = new Set(); // 중복 방지를 위한 Set
+        let wrongPool = new Set(); 
 
-        // 1. 악랄한 함정: 왕 이름은 맞는데 나라가 틀린 경우 (예: 고구려-진흥왕)
         countries.forEach(c => {
             if (c !== c_country) wrongPool.add(`${c}-${c_name}`);
         });
 
-        // 2. 일반 오답: 실제 존재하는 다른 왕들 (겹치는 업적 키워드 필터링 적용)
         for (const king of realKeys) {
             if (king === correctKing) continue;
             let isConfusing = false;
@@ -353,7 +350,6 @@
             if (!isConfusing) wrongPool.add(king);
         }
 
-        // 3. 랜덤 믹스 함정: 나라와 왕 이름을 랜덤으로 섞음 (예: 백제-광개토대왕)
         for (let i = 0; i < 15; i++) {
             const randCountry = countries[Math.floor(Math.random() * countries.length)];
             const randKing = allKingNames[Math.floor(Math.random() * allKingNames.length)];
@@ -363,14 +359,11 @@
             }
         }
 
-        // Set을 Array로 변환 후 무작위 섞기
         let optionsArray = Array.from(wrongPool);
         optionsArray.sort(() => 0.5 - Math.random());
         
-        // 7개의 오답만 추출
         let finalOptions = optionsArray.slice(0, 7);
         
-        // 정답 추가 후 다시 섞기
         finalOptions.push(correctKing);
         finalOptions.sort(() => 0.5 - Math.random());
         
@@ -405,8 +398,8 @@
         if (sortedStats.length === 0) {
             statList.innerHTML = "<li><span style='color: #27ae60; font-weight: bold;'>아직 틀린 문제가 없습니다. 완벽해요! 👍</span></li>";
         } else {
-            const topStats = sortedStats.slice(0, 10);
-            topStats.forEach(stat => {
+            // slice 없이 전체 렌더링
+            sortedStats.forEach(stat => {
                 const li = document.createElement('li');
                 li.innerHTML = `<span>${stat.text}</span> <span class="badge">${stat.count}회</span>`;
                 statList.appendChild(li);
@@ -424,7 +417,7 @@
         isAnswered = false;
         document.getElementById('result').innerText = "";
         document.getElementById('next-btn').style.display = "none";
-        document.getElementById('idk-btn').style.display = "inline-block"; // 모르겠음 버튼 다시 보이기
+        document.getElementById('idk-btn').style.display = "inline-block";
         
         currentQuestion = questionQueue.shift();
         
@@ -446,7 +439,6 @@
         });
     }
 
-    // 정답 체크 (모르겠음 처리 포함)
     function checkAnswer(btn, selectedOption) {
         if (isAnswered) return;
         isAnswered = true;
@@ -455,7 +447,6 @@
         const nextBtn = document.getElementById('next-btn');
         const idkBtn = document.getElementById('idk-btn');
 
-        // 정답 버튼 시각적 하이라이트
         const buttons = document.querySelectorAll('.option-btn');
         buttons.forEach(b => {
             if (b.innerText === currentQuestion.king) {
@@ -469,7 +460,6 @@
             resultDiv.innerText = "🎉 정답입니다!";
             resultDiv.style.color = "#2ecc71";
         } else {
-            // 오답이거나 모르겠음일 때
             if (btn) {
                 btn.classList.add('wrong');
                 btn.style.opacity = "1";
@@ -482,16 +472,14 @@
             }
             resultDiv.style.color = "#e74c3c";
             
-            // 통계 기록 누적
             const statKey = `[${currentQuestion.king}] ${currentQuestion.achievement}`;
             mistakeStats[statKey] = (mistakeStats[statKey] || 0) + 1;
             
-            // 오답 복습을 위해 랜덤한 위치에 삽입
             const insertIndex = Math.floor(Math.random() * questionQueue.length);
             questionQueue.splice(insertIndex, 0, currentQuestion);
         }
 
-        idkBtn.style.display = "none"; // 모르겠음 버튼 숨기기
+        idkBtn.style.display = "none";
         saveProgress();
         updateSidebarUI();
         nextBtn.style.display = "inline-block";
@@ -511,8 +499,8 @@
         if (sortedStats.length === 0) {
             statList.innerHTML = "<li>👏 완벽합니다! 누적된 틀린 기록이 없습니다!</li>";
         } else {
-            const topStats = sortedStats.slice(0, 10);
-            topStats.forEach(stat => {
+            // slice 없이 전체 렌더링
+            sortedStats.forEach(stat => {
                 const li = document.createElement('li');
                 li.innerHTML = `<span>${stat.text}</span> <span class="badge">${stat.count}회 틀림</span>`;
                 statList.appendChild(li);
