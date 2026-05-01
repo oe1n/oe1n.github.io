@@ -86,14 +86,31 @@
         button.option-btn.correct { background-color: #2ecc71; color: white; border-color: #2ecc71; }
         button.option-btn.wrong { background-color: #e74c3c; color: white; border-color: #e74c3c; }
         
+        /* 모르겠음 버튼 */
+        #idk-btn {
+            width: 100%;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 1rem;
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        #idk-btn:hover { background-color: #e67e22; }
+
         .result-msg {
             margin-top: 20px;
             font-size: 1.1rem;
             font-weight: bold;
             min-height: 30px;
+            white-space: pre-line;
         }
         #next-btn, #restart-btn {
-            margin-top: 20px;
+            margin-top: 10px;
             padding: 12px 25px;
             font-size: 1rem;
             background-color: #34495e;
@@ -168,10 +185,8 @@
 </head>
 <body>
 
-<!-- 우측 상단 사이드바 토글 버튼 -->
 <button id="sidebar-toggle" onclick="toggleSidebar()">📊 학습 현황</button>
 
-<!-- 사이드바 패널 -->
 <div id="sidebar" class="sidebar">
     <div class="sidebar-header">
         <h2>📊 실시간 현황 및 기록</h2>
@@ -198,6 +213,7 @@
         
         <div id="question" class="question-box">업적 로딩 중...</div>
         <div id="options" class="options-grid"></div>
+        <button id="idk-btn" onclick="checkAnswer(null, 'IDK')">🤔 모르겠음 (정답 보기)</button>
         <div id="result" class="result-msg"></div>
         <button id="next-btn" onclick="showNextQuestion()">다음 문제 ➔</button>
     </div>
@@ -242,22 +258,18 @@
     let initialTotalQuestions = 0;
     let currentQuestion = null;
     let isAnswered = false;
-    let mistakeStats = {}; // 누적 오답 기록
+    let mistakeStats = {};
 
-    // 사이드바 토글 기능
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         sidebar.classList.toggle('open');
         updateSidebarUI();
     }
 
-    // 로컬 스토리지에 진행 상태 저장
     function saveProgress() {
-        // 누적 오답 기록 저장
         localStorage.setItem('quiz_mistakeStats', JSON.stringify(mistakeStats));
         
         let queueToSave = [];
-        // 화면에 떠있으나 아직 풀지 않은 문제가 있다면 맨 앞에 보관
         if (currentQuestion && !isAnswered) {
             queueToSave.push(currentQuestion);
         }
@@ -267,25 +279,22 @@
             localStorage.setItem('quiz_queue', JSON.stringify(queueToSave));
             localStorage.setItem('quiz_initialTotal', initialTotalQuestions.toString());
         } else {
-            // 다 푼 경우 큐 초기화
             localStorage.removeItem('quiz_queue');
             localStorage.removeItem('quiz_initialTotal');
         }
     }
 
-    // 완전 초기화
     function resetAllData() {
         if(confirm("모든 학습 진행 상황과 누적 오답 기록을 삭제하시겠습니까? (이 작업은 되돌릴 수 없습니다.)")) {
             localStorage.removeItem('quiz_queue');
             localStorage.removeItem('quiz_initialTotal');
             localStorage.removeItem('quiz_mistakeStats');
             mistakeStats = {};
-            toggleSidebar(); // 사이드바 닫기
-            startGame(true); // 새 게임 시작
+            toggleSidebar();
+            startGame(true);
         }
     }
 
-    // 게임 시작 및 불러오기 통합 함수
     function startGame(forceNew = false) {
         document.getElementById('quiz-screen').style.display = 'block';
         document.getElementById('final-screen').style.display = 'none';
@@ -306,12 +315,24 @@
         showNextQuestion();
     }
 
-    // 헷갈리는 오답 방지 선택지 생성
+    // 🔥 함정 선택지 생성 로직 대폭 강화 🔥
     function generateOptions(correctKing, targetAchievement) {
-        const kings = Object.keys(data);
-        let wrongPool = [];
+        const countries = ["고구려", "백제", "신라"];
+        const realKeys = Object.keys(data);
         
-        for (const king of kings) {
+        // 모든 왕 이름만 추출 (예: '고국천왕', '진흥왕' 등 중복 제거)
+        const allKingNames = [...new Set(realKeys.map(k => k.split('-')[1]))];
+        const [c_country, c_name] = correctKing.split('-');
+        
+        let wrongPool = new Set(); // 중복 방지를 위한 Set
+
+        // 1. 악랄한 함정: 왕 이름은 맞는데 나라가 틀린 경우 (예: 고구려-진흥왕)
+        countries.forEach(c => {
+            if (c !== c_country) wrongPool.add(`${c}-${c_name}`);
+        });
+
+        // 2. 일반 오답: 실제 존재하는 다른 왕들 (겹치는 업적 키워드 필터링 적용)
+        for (const king of realKeys) {
             if (king === correctKing) continue;
             let isConfusing = false;
             const otherAchievements = data[king];
@@ -329,26 +350,34 @@
                 }
                 if (isConfusing) break;
             }
-            if (!isConfusing) wrongPool.push(king);
+            if (!isConfusing) wrongPool.add(king);
         }
 
-        wrongPool.sort(() => 0.5 - Math.random());
-        let options = wrongPool.slice(0, 7);
-
-        if (options.length < 7) {
-            let remaining = kings.filter(k => k !== correctKing && !options.includes(k));
-            remaining.sort(() => 0.5 - Math.random());
-            options = options.concat(remaining.slice(0, 7 - options.length));
+        // 3. 랜덤 믹스 함정: 나라와 왕 이름을 랜덤으로 섞음 (예: 백제-광개토대왕)
+        for (let i = 0; i < 15; i++) {
+            const randCountry = countries[Math.floor(Math.random() * countries.length)];
+            const randKing = allKingNames[Math.floor(Math.random() * allKingNames.length)];
+            const fakeKey = `${randCountry}-${randKing}`;
+            if (fakeKey !== correctKing) {
+                wrongPool.add(fakeKey);
+            }
         }
 
-        options.push(correctKing);
-        options.sort(() => 0.5 - Math.random());
-        return options;
+        // Set을 Array로 변환 후 무작위 섞기
+        let optionsArray = Array.from(wrongPool);
+        optionsArray.sort(() => 0.5 - Math.random());
+        
+        // 7개의 오답만 추출
+        let finalOptions = optionsArray.slice(0, 7);
+        
+        // 정답 추가 후 다시 섞기
+        finalOptions.push(correctKing);
+        finalOptions.sort(() => 0.5 - Math.random());
+        
+        return finalOptions;
     }
 
-    // 메인화면과 사이드바 동시 렌더링 업데이트
     function updateSidebarUI() {
-        // 메인 & 사이드바 프로그레스 업데이트
         const remaining = isAnswered ? questionQueue.length : questionQueue.length + 1;
         const total = initialTotalQuestions || 1;
         const solved = total - remaining + (isAnswered ? 1 : 0);
@@ -366,7 +395,6 @@
             document.getElementById('sb-progress-text').innerText = `진행률: ${solved} / ${total} (남은 문제: ${remaining}개)`;
         }
 
-        // 사이드바 오답 통계 업데이트
         const statList = document.getElementById('sb-stat-list');
         statList.innerHTML = "";
         
@@ -386,10 +414,9 @@
         }
     }
 
-    // 다음 문제 출력
     function showNextQuestion() {
         if (questionQueue.length === 0) {
-            saveProgress(); // 큐 빈 상태 저장
+            saveProgress();
             showFinalScreen();
             return;
         }
@@ -397,10 +424,11 @@
         isAnswered = false;
         document.getElementById('result').innerText = "";
         document.getElementById('next-btn').style.display = "none";
+        document.getElementById('idk-btn').style.display = "inline-block"; // 모르겠음 버튼 다시 보이기
         
         currentQuestion = questionQueue.shift();
         
-        saveProgress(); // 새 문제 뽑은 상태 즉시 저장 (새로고침 대응)
+        saveProgress();
         updateSidebarUI();
 
         document.getElementById('question').innerText = "Q. " + currentQuestion.achievement;
@@ -418,14 +446,16 @@
         });
     }
 
-    // 정답 체크
+    // 정답 체크 (모르겠음 처리 포함)
     function checkAnswer(btn, selectedOption) {
         if (isAnswered) return;
         isAnswered = true;
 
         const resultDiv = document.getElementById('result');
         const nextBtn = document.getElementById('next-btn');
+        const idkBtn = document.getElementById('idk-btn');
 
+        // 정답 버튼 시각적 하이라이트
         const buttons = document.querySelectorAll('.option-btn');
         buttons.forEach(b => {
             if (b.innerText === currentQuestion.king) {
@@ -439,9 +469,17 @@
             resultDiv.innerText = "🎉 정답입니다!";
             resultDiv.style.color = "#2ecc71";
         } else {
-            btn.classList.add('wrong');
-            btn.style.opacity = "1";
-            resultDiv.innerText = `❌ 오답입니다. 정답은 [${currentQuestion.king}] 입니다.\n이 문제는 큐에 다시 추가됩니다!`;
+            // 오답이거나 모르겠음일 때
+            if (btn) {
+                btn.classList.add('wrong');
+                btn.style.opacity = "1";
+            }
+            
+            if (selectedOption === 'IDK') {
+                resultDiv.innerText = `👀 모르겠음!\n정답은 [${currentQuestion.king}] 입니다.\n이 문제는 나중에 다시 출제됩니다.`;
+            } else {
+                resultDiv.innerText = `❌ 오답입니다.\n정답은 [${currentQuestion.king}] 입니다.\n이 문제는 나중에 다시 출제됩니다.`;
+            }
             resultDiv.style.color = "#e74c3c";
             
             // 통계 기록 누적
@@ -453,12 +491,12 @@
             questionQueue.splice(insertIndex, 0, currentQuestion);
         }
 
-        saveProgress(); // 오답 기록 및 큐 변화 저장
+        idkBtn.style.display = "none"; // 모르겠음 버튼 숨기기
+        saveProgress();
         updateSidebarUI();
         nextBtn.style.display = "inline-block";
     }
 
-    // 완료 화면
     function showFinalScreen() {
         document.getElementById('quiz-screen').style.display = 'none';
         document.getElementById('final-screen').style.display = 'block';
@@ -482,25 +520,21 @@
         }
     }
 
-    // 페이지 로드 시 기존 데이터 스캔 및 시작
     window.onload = () => {
-        // 저장된 통계 불러오기
         const savedStats = localStorage.getItem('quiz_mistakeStats');
         if (savedStats) mistakeStats = JSON.parse(savedStats);
 
-        // 진행중이던 큐 불러오기
         const savedQueue = localStorage.getItem('quiz_queue');
         if (savedQueue) {
             questionQueue = JSON.parse(savedQueue);
             initialTotalQuestions = parseInt(localStorage.getItem('quiz_initialTotal')) || questionQueue.length;
             
             if (questionQueue.length > 0) {
-                startGame(false); // 기존 데이터로 이어하기
+                startGame(false);
                 return;
             }
         }
         
-        // 기존 큐가 없으면 새 게임
         startGame(true); 
     };
 </script>
