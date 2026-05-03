@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>국가별 통치·군사 기구 마스터</title>
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .quiz-container { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 700px; width: 100%; text-align: center; }
+        h1 { font-size: 1.5rem; color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; display: inline-block; }
+        .progress-bar { background-color: #e0e0e0; border-radius: 10px; height: 10px; width: 100%; margin-bottom: 20px; overflow: hidden; }
+        .progress-fill { background-color: #3498db; height: 100%; width: 0%; transition: width 0.3s; }
+        .question-box { background-color: #eaf2f8; padding: 25px; border-radius: 8px; font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: #2980b9; line-height: 1.6; }
+        .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        button.option-btn { padding: 15px; font-size: 1rem; background-color: #fff; border: 2px solid #bdc3c7; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: bold; }
+        button.option-btn:hover { border-color: #3498db; background-color: #f7f9fa; }
+        button.option-btn.correct { background-color: #2ecc71 !important; color: white; border-color: #2ecc71; }
+        button.option-btn.wrong { background-color: #e74c3c !important; color: white; border-color: #e74c3c; }
+        #next-btn { margin-top: 20px; padding: 12px 30px; font-size: 1rem; background-color: #34495e; color: white; border: none; border-radius: 5px; cursor: pointer; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <h1>⚔️ 국가별 통치·군사 기구 믹스 마스터</h1>
+    
+    <div id="quiz-screen">
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        <div id="question" class="question-box">설명을 읽고 정답을 고르세요.</div>
+        <div id="options" class="options-grid"></div>
+        <div id="result" style="margin-top:20px; font-weight:bold; min-height:24px;"></div>
+        <button id="next-btn" onclick="loadQuestion()">다음 문제 ➔</button>
+    </div>
+
+    <div id="final-screen" style="display:none;">
+        <h2>🎊 모든 기구를 정복하셨습니다!</h2>
+        <p>틀린 기구들을 다시 한번 확인하며 완벽하게 외우세요.</p>
+        <div id="mistake-log" style="text-align:left; background:#fff3cd; padding:15px; border-radius:8px; margin-top:20px;"></div>
+        <button onclick="location.reload()" style="margin-top:20px; padding:12px; cursor:pointer; width:100%;">다시 도전하기</button>
+    </div>
+</div>
+
+<script>
+    // 학습지 9개 통합 - 통치 및 군사 기구 데이터[cite: 4, 5, 6, 9]
+    const quizData = [
+        // 고대 귀족 회의[cite: 4]
+        { func: "고구려의 귀족 회의체", answer: "고구려-제가 회의" },
+        { func: "백제의 귀족 회의체 (수상 선출 등)", answer: "백제-정사암 회의" },
+        { func: "신라의 만장일치제 귀족 회의체", answer: "신라-화백 회의" },
+        
+        // 중앙 행정 기구[cite: 4, 5, 6, 9]
+        { func: "통일 신라의 전제 왕권 강화 기구 (집사부의 장은 시중)", answer: "통일 신라-집사부" },
+        { func: "발해의 국정을 총괄하는 최고 기구 (정당성의 장은 대내상)", answer: "발해-정당성" },
+        { func: "고려의 국정 총괄 및 정책 결정 최고 관서", answer: "고려-중서문하성" },
+        { func: "고려의 정책을 실제로 집행하는 기구 (하부에 6부)", answer: "고려-상서성" },
+        { func: "조선의 국정 총괄 기구 (재상들의 합의체)", answer: "조선-의정부" },
+        { func: "조선의 실제 정책 집행 기구 (이·호·예·병·형·공)", answer: "조선-6조" },
+        
+        // 감찰 및 특수 기구[cite: 5, 6, 9]
+        { func: "고려의 관리 감찰 및 풍기 단속 기구", answer: "고려-어사대" },
+        { func: "조선의 관리 비리 감찰 기구 (삼사의 하나)", answer: "조선-사헌부" },
+        { func: "고려의 화폐와 곡식 출납 (회계 업무)", answer: "고려-삼사" },
+        { func: "조선의 언론 기구 (사헌부·사간원·홍문관)", answer: "조선-삼사" },
+        { func: "고려의 국방·군사 문제 논의 (독자적 기구)", answer: "고려-도병마사" },
+        { func: "조선의 왕명 출납 및 비서 기관", answer: "조선-승정원" },
+        { func: "조선의 왕 직속 특별 사법 기구 (역모 등)", answer: "조선-의금부" },
+
+        // 군사 기구
+        { func: "통일 신라의 중앙군 (민족 융합 성격)", answer: "통일 신라-9서당" },
+        { func: "발해의 중앙군 조직", answer: "발해-10위" },
+        { func: "고려의 중앙군 (국왕 친위 및 수도 방어)", answer: "고려-2군 6위" },
+        { func: "조선 임진왜란 중 설치된 상비군 (삼수병 구성)", answer: "조선-훈련도감" }
+    ];
+
+    let queue = [...quizData].sort(() => Math.random() - 0.5);
+    let total = queue.length;
+    let solved = 0;
+    let current = null;
+    let mistakes = {};
+
+    function loadQuestion() {
+        if (queue.length === 0) { showFinal(); return; }
+        current = queue.shift();
+        
+        document.getElementById('progress-fill').style.width = `${(solved / total) * 100}%`;
+        document.getElementById('question').innerText = `Q. "${current.func}" 역할을 하는 기구는?`;
+        document.getElementById('result').innerText = "";
+        document.getElementById('next-btn').style.display = "none";
+
+        // 오답 생성 (전체 데이터에서 랜덤 3개 선택)
+        let options = [current.answer];
+        let others = quizData.filter(d => d.answer !== current.answer).map(d => d.answer);
+        while (options.length < 4) {
+            let rand = others[Math.floor(Math.random() * others.length)];
+            if (!options.includes(rand)) options.push(rand);
+        }
+        options.sort(() => Math.random() - 0.5);
+
+        const container = document.getElementById('options');
+        container.innerHTML = "";
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = "option-btn";
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(opt, btn);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selected, btn) {
+        if (document.getElementById('next-btn').style.display === "block") return;
+        const allBtns = document.querySelectorAll('.option-btn');
+        
+        if (selected === current.answer) {
+            btn.classList.add('correct');
+            document.getElementById('result').innerText = "⭕ 정답입니다!";
+            document.getElementById('result').style.color = "#2ecc71";
+            solved++;
+        } else {
+            if(btn) btn.classList.add('wrong');
+            allBtns.forEach(b => { if(b.innerText === current.answer) b.classList.add('correct'); });
+            document.getElementById('result').innerText = `❌ 오답! 정답은 [ ${current.answer} ] 입니다.`;
+            document.getElementById('result').style.color = "#e74c3c";
+            mistakes[current.answer] = (mistakes[current.answer] || 0) + 1;
+            queue.push(current); // 틀린 문제 다시 풀기
+        }
+        document.getElementById('next-btn').style.display = "block";
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-screen').style.display = "none";
+        document.getElementById('final-screen').style.display = "block";
+        const log = document.getElementById('mistake-log');
+        let html = "<h3>📊 복습이 필요한 기구들</h3><ul>";
+        for (let key in mistakes) { html += `<li><strong>${key}</strong>: ${mistakes[key]}회 틀림</li>`; }
+        html += "</ul>";
+        log.innerHTML = Object.keys(mistakes).length > 0 ? html : "<p>모든 기구를 한 번에 맞히셨습니다! 완벽해요!</p>";
+    }
+
+    window.onload = loadQuestion;
+</script>
+
+</body>
+</html>
