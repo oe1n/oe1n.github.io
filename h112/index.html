@@ -3,125 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>국가별 기구 믹스 마스터 (저장 기능 포함)</title>
+    <title>한국사 기구 마스터 (KRHIS1112_)</title>
     <style>
-        body {
-            font-family: 'Malgun Gothic', sans-serif;
-            background-color: #f0f4f8;
-            color: #333;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .quiz-container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            max-width: 650px;
-            width: 100%;
-            text-align: center;
-            position: relative;
-        }
-        h1 { font-size: 1.4rem; color: #2c3e50; margin-bottom: 10px; }
-        
-        /* 프로그레스 바 */
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .quiz-container { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 650px; width: 100%; text-align: center; }
+        h1 { font-size: 1.4rem; color: #2c3e50; margin-bottom: 10px; border-bottom: 2px solid #3498db; display: inline-block; }
         .progress-bar { background-color: #e0e0e0; border-radius: 10px; height: 10px; width: 100%; margin-bottom: 5px; overflow: hidden; }
         .progress-fill { background-color: #3498db; height: 100%; width: 0%; transition: width 0.3s; }
         .progress-text { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 20px; font-weight: bold; }
-        
-        /* 퀴즈 UI */
-        .question-box { background-color: #eaf2f8; padding: 25px; border-radius: 8px; font-size: 1.15rem; font-weight: bold; margin-bottom: 25px; color: #2980b9; line-height: 1.5; }
+        .question-box { background-color: #eaf2f8; padding: 25px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; margin-bottom: 25px; color: #2980b9; line-height: 1.5; }
         .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
         button.option-btn { padding: 15px; font-size: 0.95rem; background-color: #fff; border: 2px solid #bdc3c7; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: bold; }
         button.option-btn:hover { border-color: #3498db; background-color: #f7f9fa; }
         button.option-btn.correct { background-color: #2ecc71 !important; color: white; border-color: #2ecc71; }
         button.option-btn.wrong { background-color: #e74c3c !important; color: white; border-color: #e74c3c; }
-        
-        #next-btn { margin-top: 15px; padding: 12px 30px; font-size: 1rem; background-color: #34495e; color: white; border: none; border-radius: 5px; cursor: pointer; display: none; font-weight: bold; }
+        #next-btn { margin-top: 15px; padding: 12px 30px; background-color: #34495e; color: white; border: none; border-radius: 5px; cursor: pointer; display: none; font-weight: bold; }
         #idk-btn { width: 100%; padding: 12px; margin-top: 15px; background-color: #95a5a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-
-        /* 사이드바 UI */
         #sidebar-toggle { position: fixed; top: 20px; right: 20px; padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; z-index: 900; }
         .sidebar { position: fixed; top: 0; right: -320px; width: 320px; height: 100vh; background: #fff; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s; z-index: 1000; display: flex; flex-direction: column; }
         .sidebar.open { right: 0; }
         .sidebar-header { padding: 20px; background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center; }
-        .sidebar-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
-        .stat-list { list-style: none; padding: 0; font-size: 0.9rem; }
+        .stat-list { list-style: none; padding: 20px; font-size: 0.9rem; overflow-y: auto; flex-grow: 1; }
         .stat-list li { padding: 8px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; }
         .badge { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.75rem; }
-        .danger-btn { width: 100%; padding: 10px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; font-weight: bold; }
-
-        #final-screen { display: none; }
     </style>
 </head>
 <body>
 
-<button id="sidebar-toggle" onclick="toggleSidebar()">📊 학습 기록</button>
+<button id="sidebar-toggle" onclick="toggleSidebar()">📊 학습 현황</button>
 
 <div id="sidebar" class="sidebar">
     <div class="sidebar-header">
-        <h3>📊 누적 학습 현황</h3>
+        <h3>📊 오답 추적 기록</h3>
         <button onclick="toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
     </div>
-    <div class="sidebar-content">
-        <h4>현재 진행률</h4>
-        <div class="progress-bar"><div id="sb-progress-fill" class="progress-fill"></div></div>
-        <p id="sb-progress-text" style="font-size:0.8rem; text-align:center;"></p>
-        
-        <h4>🔥 집중 복습 필요 (오답)</h4>
-        <ul id="sb-stat-list" class="stat-list"></ul>
-        <button class="danger-btn" onclick="resetAllData()">데이터 초기화</button>
+    <ul id="sb-stat-list" class="stat-list"></ul>
+    <div style="padding: 20px;">
+        <button style="width:100%; padding:10px; background:#e74c3c; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;" onclick="resetAllData()">KRHIS1112 데이터 초기화</button>
     </div>
 </div>
 
 <div class="quiz-container">
     <h1>⚔️ 국가별 기구 믹스 마스터</h1>
-    
     <div id="quiz-screen">
         <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
         <div id="progress-text" class="progress-text"></div>
         <div id="question" class="question-box"></div>
         <div id="options" class="options-grid"></div>
-        <button id="idk-btn" onclick="checkAnswer(null, 'IDK')">🤔 잘 모르겠음 (정답 확인)</button>
+        <button id="idk-btn" onclick="checkAnswer(null, 'IDK')">🤔 잘 모르겠음</button>
         <div id="result" style="margin-top:15px; font-weight:bold; min-height:24px;"></div>
         <button id="next-btn" onclick="showNextQuestion()">다음 문제 ➔</button>
     </div>
-
-    <div id="final-screen">
-        <h2>🎉 모든 기구 마스터 완료!</h2>
-        <p>포기하지 않고 끝까지 완료한 것을 축하합니다.</p>
-        <button onclick="startGame(true)" style="padding:15px 30px; cursor:pointer; background:#2ecc71; color:white; border:none; border-radius:8px; font-weight:bold;">처음부터 다시 도전</button>
+    <div id="final-screen" style="display:none;">
+        <h2>🎉 전 시대 기구 완전 정복!</h2>
+        <button onclick="startGame(true)" style="padding:15px 30px; cursor:pointer; background:#2ecc71; color:white; border:none; border-radius:8px; font-weight:bold;">새로운 마음으로 시작</button>
     </div>
 </div>
 
 <script>
-    // 학습지 기반 통합 데이터[cite: 4, 5, 6, 9]
+    // PREFIX 설정: KRHIS1112_
+    const PREFIX = "KRHIS1112_";
+    
+    // 학습지 기반 통합 데이터 (삼국~조선)[cite: 4, 5, 6, 9]
     const quizData = [
         { func: "고구려의 귀족 회의체", answer: "고구려-제가 회의" },
-        { func: "백제의 귀족 회의체 (수상 선출 등)", answer: "백제-정사암 회의" },
+        { func: "백제의 귀족 회의체", answer: "백제-정사암 회의" },
         { func: "신라의 만장일치제 귀족 회의체", answer: "신라-화백 회의" },
         { func: "통일 신라의 전제 왕권 강화 기구 (장관: 시중)", answer: "통일 신라-집사부" },
         { func: "발해의 국정 총괄 최고 기구 (장관: 대내상)", answer: "발해-정당성" },
         { func: "고려의 국정 총괄 및 정책 결정 최고 관서", answer: "고려-중서문하성" },
         { func: "고려의 정책 실제 집행 기구 (하부에 6부)", answer: "고려-상서성" },
         { func: "조선의 국정 총괄 기구 (재상 합의체)", answer: "조선-의정부" },
-        { func: "조선의 실제 정책 집행 기구 (이·호·예·병·형·공)", answer: "조선-6조" },
+        { func: "조선의 실제 정책 집행 기구 (6조)", answer: "조선-6조" },
         { func: "고려의 관리 감찰 및 풍기 단속 기구", answer: "고려-어사대" },
         { func: "조선의 관리 비리 감찰 기구 (삼사의 하나)", answer: "조선-사헌부" },
         { func: "고려의 화폐와 곡식 출납 (회계 업무)", answer: "고려-삼사" },
         { func: "조선의 언론 기구 (사헌부·사간원·홍문관)", answer: "조선-삼사" },
         { func: "고려의 국방·군사 문제 논의 (독자적 기구)", answer: "고려-도병마사" },
         { func: "조선의 왕명 출납 및 비서 기관", answer: "조선-승정원" },
-        { func: "조선의 왕 직속 특별 사법 기구 (역모 등 처결)", answer: "조선-의금부" },
-        { func: "통일 신라의 중앙군 (민족 융합 성격)", answer: "통일 신라-9서당" },
+        { func: "조선의 왕 직속 특별 사법 기구", answer: "조선-의금부" },
+        { func: "통일 신라의 중앙군 (민족 융합)", answer: "통일 신라-9서당" },
         { func: "발해의 중앙군 조직", answer: "발해-10위" },
         { func: "고려의 중앙군 (국왕 친위 및 수도 방어)", answer: "고려-2군 6위" },
-        { func: "조선 임진왜란 중 설치된 상비군 (삼수병 구성)", answer: "조선-훈련도감" }
+        { func: "조선 임진왜란 중 설치된 상비군 (삼수병)", answer: "조선-훈련도감" }
     ];
 
     let questionQueue = [];
@@ -133,15 +97,17 @@
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); updateSidebarUI(); }
 
     function saveProgress() {
-        localStorage.setItem('mix_mistakeStats', JSON.stringify(mistakeStats));
+        localStorage.setItem(PREFIX + 'mistakeStats', JSON.stringify(mistakeStats));
         let queueToSave = (currentQuestion && !isAnswered) ? [currentQuestion, ...questionQueue] : [...questionQueue];
-        localStorage.setItem('mix_queue', JSON.stringify(queueToSave));
-        localStorage.setItem('mix_initialTotal', initialTotal.toString());
+        localStorage.setItem(PREFIX + 'queue', JSON.stringify(queueToSave));
+        localStorage.setItem(PREFIX + 'initialTotal', initialTotal.toString());
     }
 
     function resetAllData() {
-        if(confirm("모든 학습 기록을 초기화할까요?")) {
-            localStorage.clear();
+        if(confirm("KRHIS1112_와 관련된 모든 학습 기록을 초기화할까요?")) {
+            Object.keys(localStorage).forEach(key => {
+                if(key.startsWith(PREFIX)) localStorage.removeItem(key);
+            });
             mistakeStats = {};
             toggleSidebar();
             startGame(true);
@@ -151,7 +117,6 @@
     function startGame(forceNew = false) {
         document.getElementById('quiz-screen').style.display = 'block';
         document.getElementById('final-screen').style.display = 'none';
-        
         if (forceNew) {
             questionQueue = [...quizData].sort(() => Math.random() - 0.5);
             initialTotal = questionQueue.length;
@@ -160,15 +125,17 @@
     }
 
     function showNextQuestion() {
-        if (questionQueue.length === 0) { showFinalScreen(); return; }
+        if (questionQueue.length === 0) {
+            document.getElementById('quiz-screen').style.display = 'none';
+            document.getElementById('final-screen').style.display = 'block';
+            return;
+        }
         isAnswered = false;
         currentQuestion = questionQueue.shift();
-        
         document.getElementById('result').innerText = "";
         document.getElementById('next-btn').style.display = "none";
         document.getElementById('idk-btn').style.display = "block";
-        
-        document.getElementById('question').innerText = `Q. "${currentQuestion.func}" 기능을 수행하는 기구는?`;
+        document.getElementById('question').innerText = `Q. "${currentQuestion.func}" 기구는?`;
         
         let options = [currentQuestion.answer];
         let others = quizData.filter(d => d.answer !== currentQuestion.answer).map(d => d.answer);
@@ -194,23 +161,20 @@
     function checkAnswer(btn, selected) {
         if (isAnswered) return;
         isAnswered = true;
-        const resultDiv = document.getElementById('result');
-        
         document.querySelectorAll('.option-btn').forEach(b => {
             if (b.innerText === currentQuestion.answer) b.classList.add('correct');
             else b.style.opacity = "0.5";
         });
 
         if (selected === currentQuestion.answer) {
-            resultDiv.innerText = "⭕ 정답입니다!";
-            resultDiv.style.color = "#2ecc71";
+            document.getElementById('result').innerText = "⭕ 정답입니다!";
+            document.getElementById('result').style.color = "#2ecc71";
         } else {
             if (btn) btn.classList.add('wrong');
-            resultDiv.innerText = selected === 'IDK' ? `👀 정답은 [${currentQuestion.answer}] 입니다.` : `❌ 틀렸습니다! 정답은 [${currentQuestion.answer}] 입니다.`;
-            resultDiv.style.color = "#e74c3c";
-            
+            document.getElementById('result').innerText = `❌ 정답: [${currentQuestion.answer}]`;
+            document.getElementById('result').style.color = "#e74c3c";
             mistakeStats[currentQuestion.answer] = (mistakeStats[currentQuestion.answer] || 0) + 1;
-            questionQueue.push(currentQuestion); // 틀리면 다시 큐에 넣음
+            questionQueue.push(currentQuestion);
         }
         document.getElementById('next-btn').style.display = "inline-block";
         document.getElementById('idk-btn').style.display = "none";
@@ -221,39 +185,30 @@
         const remaining = isAnswered ? questionQueue.length : questionQueue.length + 1;
         const solved = initialTotal - remaining + (isAnswered ? 1 : 0);
         const percent = (solved / initialTotal) * 100;
-
         document.getElementById('progress-fill').style.width = `${percent}%`;
-        document.getElementById('sb-progress-fill').style.width = `${percent}%`;
-        document.getElementById('progress-text').innerText = `진행률: ${solved} / ${initialTotal} (남은 문제: ${remaining})`;
-        document.getElementById('sb-progress-text').innerText = `${Math.floor(percent)}% 완료`;
-
-        const statList = document.getElementById('sb-stat-list');
-        statList.innerHTML = "";
+        document.getElementById('progress-text').innerText = `진행률: ${solved} / ${initialTotal}`;
+        
+        const list = document.getElementById('sb-stat-list');
+        list.innerHTML = "";
         Object.entries(mistakeStats).sort((a,b) => b[1] - a[1]).forEach(([name, count]) => {
             const li = document.createElement('li');
             li.innerHTML = `<span>${name}</span> <span class="badge">${count}회</span>`;
-            statList.appendChild(li);
+            list.appendChild(li);
         });
     }
 
-    function showFinalScreen() {
-        document.getElementById('quiz-screen').style.display = 'none';
-        document.getElementById('final-screen').style.display = 'block';
-    }
-
     window.onload = () => {
-        const savedQueue = localStorage.getItem('mix_queue');
-        const savedStats = localStorage.getItem('mix_mistakeStats');
+        const savedQueue = localStorage.getItem(PREFIX + 'queue');
+        const savedStats = localStorage.getItem(PREFIX + 'mistakeStats');
         if (savedStats) mistakeStats = JSON.parse(savedStats);
         if (savedQueue && JSON.parse(savedQueue).length > 0) {
             questionQueue = JSON.parse(savedQueue);
-            initialTotal = parseInt(localStorage.getItem('mix_initialTotal'));
+            initialTotal = parseInt(localStorage.getItem(PREFIX + 'initialTotal'));
             startGame(false);
         } else {
             startGame(true);
         }
     };
 </script>
-
 </body>
 </html>
