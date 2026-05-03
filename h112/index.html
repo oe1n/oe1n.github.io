@@ -3,104 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>한국사 기구 마스터 (KRHIS1112_)</title>
+    <title>한국사 기구 양방향 마스터</title>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
-        .quiz-container { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 750px; width: 100%; text-align: center; }
-        h1 { font-size: 1.4rem; color: #2c3e50; margin-bottom: 10px; border-bottom: 2px solid #3498db; display: inline-block; }
-        .progress-bar { background-color: #e0e0e0; border-radius: 10px; height: 10px; width: 100%; margin-bottom: 5px; overflow: hidden; }
+        body { 
+            font-family: 'Malgun Gothic', sans-serif; 
+            background-color: #f0f4f8; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100dvh; /* 요청하신 100dvh */
+            margin: 0; 
+            padding: 10px; 
+            box-sizing: border-box; 
+            overflow: hidden;
+        }
+        .quiz-container { 
+            background-color: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            max-width: 650px; 
+            width: 100%; 
+            max-height: 98dvh;
+            display: flex;
+            flex-direction: column;
+            text-align: center; 
+        }
+        h1 { font-size: 1.1rem; color: #2c3e50; margin-bottom: 8px; border-bottom: 2px solid #3498db; display: inline-block; }
+        .progress-bar { background-color: #e0e0e0; border-radius: 10px; height: 6px; width: 100%; margin-bottom: 5px; overflow: hidden; }
         .progress-fill { background-color: #3498db; height: 100%; width: 0%; transition: width 0.3s; }
-        .progress-text { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 20px; font-weight: bold; }
-        .question-box { background-color: #eaf2f8; padding: 25px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; margin-bottom: 25px; color: #2980b9; line-height: 1.5; min-height: 80px; display: flex; align-items: center; justify-content: center; }
-        .options-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 10px; }
-        button.option-btn { padding: 15px; font-size: 0.95rem; background-color: #fff; border: 2px solid #bdc3c7; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: bold; text-align: left; }
+        .progress-text { font-size: 0.7rem; color: #7f8c8d; margin-bottom: 10px; font-weight: bold; }
+        
+        .question-box { 
+            background-color: #eaf2f8; 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-size: 1rem; 
+            font-weight: bold; 
+            margin-bottom: 15px; 
+            color: #2980b9; 
+            line-height: 1.4; 
+            min-height: 60px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .options-grid { display: grid; grid-template-columns: 1fr; gap: 8px; overflow-y: auto; flex-grow: 1; padding: 5px; }
+        button.option-btn { 
+            padding: 12px; 
+            font-size: 0.85rem; 
+            background-color: #fff; 
+            border: 2px solid #bdc3c7; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            font-weight: bold; 
+            text-align: left; 
+        }
         button.option-btn:hover { border-color: #3498db; background-color: #f7f9fa; }
         button.option-btn.correct { background-color: #2ecc71 !important; color: white; border-color: #2ecc71; }
         button.option-btn.wrong { background-color: #e74c3c !important; color: white; border-color: #e74c3c; }
-        #next-btn { margin-top: 15px; padding: 12px 30px; background-color: #34495e; color: white; border: none; border-radius: 5px; cursor: pointer; display: none; font-weight: bold; }
-        #idk-btn { width: 100%; padding: 12px; margin-top: 15px; background-color: #95a5a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        #sidebar-toggle { position: fixed; top: 20px; right: 20px; padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; z-index: 900; }
-        .sidebar { position: fixed; top: 0; right: -320px; width: 320px; height: 100vh; background: #fff; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s; z-index: 1000; display: flex; flex-direction: column; }
+        
+        #next-btn { margin-top: 10px; padding: 10px 25px; background-color: #34495e; color: white; border: none; border-radius: 5px; cursor: pointer; display: none; font-weight: bold; }
+        #idk-btn { width: 100%; padding: 10px; margin-top: 5px; background-color: #95a5a6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+        #sidebar-toggle { position: fixed; top: 10px; right: 10px; padding: 6px 10px; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.7rem; z-index: 900; }
+        .sidebar { position: fixed; top: 0; right: -320px; width: 260px; height: 100dvh; background: #fff; box-shadow: -4px 0 15px rgba(0,0,0,0.1); transition: right 0.3s; z-index: 1000; display: flex; flex-direction: column; }
         .sidebar.open { right: 0; }
-        .sidebar-header { padding: 20px; background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center; }
-        .stat-list { list-style: none; padding: 20px; font-size: 0.9rem; overflow-y: auto; flex-grow: 1; }
-        .stat-list li { padding: 8px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center; }
-        .badge { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
+        .stat-list { list-style: none; padding: 10px; font-size: 0.75rem; overflow-y: auto; flex-grow: 1; }
+        .stat-list li { padding: 5px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; }
+        .badge { background: #e74c3c; color: white; padding: 1px 4px; border-radius: 8px; font-size: 0.6rem; }
     </style>
 </head>
 <body>
 
-<button id="sidebar-toggle" onclick="toggleSidebar()">📊 학습 현황</button>
+<button id="sidebar-toggle" onclick="toggleSidebar()">📊 오답기록</button>
 
 <div id="sidebar" class="sidebar">
-    <div class="sidebar-header">
-        <h3>📊 오답 추적 기록</h3>
-        <button onclick="toggleSidebar()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+    <div style="padding: 10px; background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin:0; font-size:0.85rem;">📊 누적 오답 기록</h3>
+        <button onclick="toggleSidebar()" style="background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">&times;</button>
     </div>
     <ul id="sb-stat-list" class="stat-list"></ul>
-    <div style="padding: 20px;">
-        <button style="width:100%; padding:10px; background:#e74c3c; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;" onclick="resetAllData()">KRHIS1112 데이터 초기화</button>
+    <div style="padding: 10px;">
+        <button style="width:100%; padding:8px; background:#e74c3c; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold; font-size:0.8rem;" onclick="resetAllData()">초기화</button>
     </div>
 </div>
 
 <div class="quiz-container">
-    <h1>⚔️ 국가 기구 양방향 마스터</h1>
+    <h1>⚔️ 한국사 양방향 마스터</h1>
     <div id="quiz-screen">
         <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
         <div id="progress-text" class="progress-text"></div>
         <div id="question" class="question-box"></div>
         <div id="options" class="options-grid"></div>
-        <button id="idk-btn" onclick="checkAnswer(null, 'IDK')">🤔 잘 모르겠음</button>
-        <div id="result" style="margin-top:15px; font-weight:bold; min-height:24px;"></div>
+        <button id="idk-btn" onclick="checkAnswer(null, 'IDK')">🤔 잘 모르겠음 (정답 보기)</button>
+        <div id="result" style="margin-top:8px; font-weight:bold; min-height:18px; font-size:0.8rem;"></div>
         <button id="next-btn" onclick="showNextQuestion()">다음 문제 ➔</button>
     </div>
     <div id="final-screen" style="display:none;">
-        <h2>🎉 모든 기구 마스터 완료!</h2>
-        <button onclick="startGame(true)" style="padding:15px 30px; cursor:pointer; background:#2ecc71; color:white; border:none; border-radius:8px; font-weight:bold;">다시 도전</button>
+        <h2>🎓 기구 마스터 완료!</h2>
+        <button onclick="startGame(true)" style="padding:10px 20px; cursor:pointer; background:#2ecc71; color:white; border:none; border-radius:8px; font-weight:bold;">새로 시작</button>
     </div>
 </div>
 
 <script>
     const PREFIX = "KRHIS1112_";
     
-    // 통합 기구 데이터[cite: 3, 4, 5, 6, 7, 9]
+    // 9개 학습지 통합 데이터 (고대~조선)[cite: 1, 2, 3, 4, 7, 8, 9]
     const quizData = [
-        { country: "고구려", name: "제가 회의", func: "초기 5부족 연맹체 기반의 귀족 회의체" },
-        { country: "백제", name: "정사암 회의", func: "수상인 상좌평 등을 선출하던 귀족 회의체" },
-        { country: "신라", name: "화백 회의", func: "만장일치제로 운영된 국가 중대사 결정 기구" },
-        { country: "고구려", name: "진대법", func: "고국천왕 시기 실시된 빈민 구제(춘대추납) 제도" },
-        { country: "신라", name: "상대등", func: "법흥왕 시기 설치된 화백 회의의 의장" },
-        { country: "신라", name: "병부", func: "법흥왕 시기 설치된 군사 업무 관할 기구" },
-        { country: "통일 신라", name: "집사부", func: "신문왕 시기 강화된 국정 총괄 기구 (장관: 시중)" },
-        { country: "통일 신라", name: "국학", func: "신문왕 시기 유교 교육을 위해 설치된 국립 교육 기관" },
-        { country: "발해", name: "정당성", func: "3성 중 국정 총괄 기구 (장관: 대내상)" },
-        { country: "발해", name: "중정대", func: "관리의 비리 등을 감찰하던 기구" },
-        { country: "고려", name: "중서문하성", func: "국정 전반을 총괄하고 정책을 결정하는 최고 관서" },
-        { country: "고려", name: "상서성", func: "6부를 거느리고 실제로 정책을 집행하는 기구" },
-        { country: "고려", name: "중추원", func: "왕명 출납(승선)과 군사 기밀(추밀)을 담당한 기구" },
-        { country: "고려", name: "어사대", func: "관리 감찰 및 풍기 단속을 담당한 기구" },
-        { country: "고려", name: "삼사", func: "화폐와 곡식의 출납을 관리하던 회계 기구" },
-        { country: "고려", name: "도병마사", func: "국방·군사 문제를 논의하던 고려의 독자적 회의 기구" },
-        { country: "고려", name: "식목도감", func: "법의 제정이나 각종 시행 규칙(격식)을 논의하던 기구" },
-        { country: "고려", name: "교정도감", func: "최충헌 집권기 설치된 무신 정권의 최고 권력 기구" },
-        { country: "고려", name: "정방", func: "최우 집권기 설치된 인사 행정 담당 기구" },
-        { country: "조선", name: "의정부", func: "재상들의 합의를 통해 국정을 총괄하던 기구" },
-        { country: "조선", name: "6조", func: "이·호·예·병·형·공부로 구성된 실제 행정 집행 기구" },
-        { country: "조선", name: "승정원", func: "왕명의 출납을 담당하는 국왕의 비서 기관" },
-        { country: "조선", name: "의금부", func: "국왕 직속의 특별 사법 기관 (역모죄 등 처결)" },
-        { country: "조선", name: "사간원", func: "국왕에 대한 간쟁과 논박을 담당한 언론 기구" },
-        { country: "조선", name: "사헌부", func: "관리의 비리 감찰 및 풍속 교정을 담당한 언론 기구" },
-        { country: "조선", name: "홍문관", func: "집현전 계승, 국왕의 자문과 경연을 담당한 언론 기구" },
-        { country: "통일 신라", name: "9서당", func: "고구려·백제·말갈인까지 포함한 중앙 군사 조직" },
-        { country: "발해", name: "10위", func: "수도를 방비하던 발해의 중앙군 조직" },
-        { country: "고려", name: "2군 6위", func: "국왕 친위대와 수도 및 국경 방어를 담당한 중앙군" },
-        { country: "조선", name: "훈련도감", func: "임진왜란 중 설치된 포수·사수·살수 구성의 상비군" }
+        { country: "고조선", name: "8조법", func: "생명 존중, 사유 재산, 계급 사회임을 보여주는 법률[cite: 1]" },
+        { country: "부여", name: "사출도", func: "마가·우가·저가·구가의 가(加)들이 다스린 행정 구역[cite: 1]" },
+        { country: "고구려", name: "서옥제", func: "신랑이 신부 집 뒤뜰의 서옥에 머무는 데릴사위제[cite: 1]" },
+        { country: "옥저", name: "민며느리제", func: "장래에 혼인할 여자를 미리 데려다 키우는 풍습[cite: 1]" },
+        { country: "삼한", name: "소도", func: "제사장인 천군이 다스린 신성 지역 (제정 분리)[cite: 1]" },
+        { country: "고구려", name: "진대법", func: "곡식을 봄에 빌려주고 가을에 갚게 한 빈민 구제 제도[cite: 2]" },
+        { country: "신라", name: "화백 회의", func: "진골 귀족들이 모여 만장일치제로 운영한 의사 결정 기구[cite: 2]" },
+        { country: "백제", name: "22담로", func: "무령왕 시기 지방 통제를 위해 왕족을 파견한 특수 행정 구역[cite: 2]" },
+        { country: "신라", name: "상대등", func: "법흥왕 시기 설치된 화백 회의의 의장이자 귀족의 대표[cite: 2]" },
+        { country: "신라", name: "병부", func: "법흥왕 시기 설치되어 군사 업무를 총괄한 기구[cite: 2]" },
+        { country: "통일 신라", name: "집사부", func: "신문왕 시기 강화된 국정 총괄 기구 (장관: 시중)[cite: 3]" },
+        { country: "통일 신라", name: "9서당", func: "고구려·백제 유민과 말갈인까지 포함한 중앙 군사 조직[cite: 3]" },
+        { country: "발해", name: "정당성", func: "3성 중 국정을 총괄한 최고 기구 (장관: 대내상)[cite: 3]" },
+        { country: "고려", name: "중서문하성", func: "국정 전반을 총괄하고 정책을 결정하는 고려 최고 관서[cite: 4]" },
+        { country: "고려", name: "어사대", func: "관리 감찰 및 풍기 단속을 담당한 고려의 감찰 기구[cite: 4]" },
+        { country: "고려", name: "삼사", func: "화폐와 곡식의 출납을 담당한 고려의 회계 기구[cite: 4]" },
+        { country: "고려", name: "도병마사", func: "국방과 군사 문제를 논의하던 고려의 독자적 회의 기구[cite: 4]" },
+        { country: "조선", name: "의정부", func: "재상들이 합의를 통해 국정을 총괄하던 조선 최고 기구[cite: 7]" },
+        { country: "조선", name: "6조", func: "이·호·예·병·형·공조로 구성된 조선의 행정 집행 기구[cite: 7]" },
+        { country: "조선", name: "승정원", func: "왕명의 출납을 담당하는 조선 국왕의 비서 기관[cite: 7]" },
+        { country: "조선", name: "의금부", func: "국왕 직속의 사법 기관으로 역모 등 중죄를 처결[cite: 7]" },
+        { country: "조선", name: "사헌부", func: "관리 감찰 및 풍속 교정을 담당한 조선 삼사의 하나[cite: 7]" },
+        { country: "조선", name: "사간원", func: "국왕에 대한 간쟁과 봉박을 담당한 조선 삼사의 하나[cite: 7]" },
+        { country: "조선", name: "홍문관", func: "집현전을 계승하여 국왕의 자문에 응하던 조선 삼사의 하나[cite: 7]" },
+        { country: "조선", name: "훈련도감", func: "임란 중 설치된 포수·사수·살수 삼수병 구성의 상비군[cite: 9]" }
     ];
 
     let questionQueue = [];
     let initialTotal = 0;
     let current = null;
-    let type = 0; // 0: 이름->나라+역할, 1: 역할->나라+이름
+    let qType = 0; 
+    let currentCorrectAnswer = ""; // 정답 문자열 전역 관리
     let isAnswered = false;
     let mistakeStats = {};
 
@@ -114,7 +157,7 @@
     }
 
     function resetAllData() {
-        if(confirm("모든 학습 기록을 초기화할까요?")) {
+        if(confirm("모든 데이터를 초기화하시겠습니까?")) {
             Object.keys(localStorage).forEach(k => { if(k.startsWith(PREFIX)) localStorage.removeItem(k); });
             mistakeStats = {};
             toggleSidebar();
@@ -140,28 +183,31 @@
         }
         isAnswered = false;
         current = questionQueue.shift();
-        type = Math.floor(Math.random() * 2); // 문제 유형 랜덤 결정
+        qType = Math.floor(Math.random() * 2); 
         
         document.getElementById('result').innerText = "";
         document.getElementById('next-btn').style.display = "none";
         document.getElementById('idk-btn').style.display = "block";
 
         const qBox = document.getElementById('question');
-        const correctStr = type === 0 ? `[ ${current.country} - ${current.func} ]` : `[ ${current.country} - ${current.name} ]`;
-
-        if (type === 0) {
-            qBox.innerHTML = `Q. <span style="color:#e67e22;">"${current.name}"</span> 기구의 소속 국가와 역할은?`;
-        } else {
-            qBox.innerHTML = `Q. <span style="color:#e67e22;">"${current.func}"</span> 역할을 수행하는 국가와 기구는?`;
+        
+        // 정답 및 질문 텍스트 설정
+        if (qType === 0) { // 이름 -> 역할
+            qBox.innerHTML = `Q. <span style="color:#e67e22;">"${current.name}"</span> (국가: ${current.country}) 의 역할은?`;
+            currentCorrectAnswer = current.func;
+        } else { // 역할 -> 이름
+            qBox.innerHTML = `Q. <span style="color:#e67e22;">"${current.func}"</span> (국가: ${current.country}) 를 담당한 기구는?`;
+            currentCorrectAnswer = current.name;
         }
         
-        let options = [correctStr];
-        let others = quizData.filter(d => d.name !== current.name).map(d => 
-            type === 0 ? `[ ${d.country} - ${d.func} ]` : `[ ${d.country} - ${d.name} ]`
-        );
-        
-        while (options.length < 4) {
-            let rand = others[Math.floor(Math.random() * others.length)];
+        // 보기 생성
+        let options = [currentCorrectAnswer];
+        let others = quizData
+            .filter(d => d.name !== current.name && d.func !== current.func)
+            .map(d => qType === 0 ? d.func : d.name);
+            
+        while (options.length < 4 && others.length > 0) {
+            let rand = others.splice(Math.floor(Math.random() * others.length), 1)[0];
             if (!options.includes(rand)) options.push(rand);
         }
         options.sort(() => Math.random() - 0.5);
@@ -172,31 +218,33 @@
             const btn = document.createElement('button');
             btn.className = "option-btn";
             btn.innerText = opt;
-            btn.onclick = () => checkAnswer(btn, opt, correctStr);
+            btn.onclick = () => checkAnswer(btn, opt);
             container.appendChild(btn);
         });
         updateSidebarUI();
         saveProgress();
     }
 
-    function checkAnswer(btn, selected, correct) {
+    function checkAnswer(btn, selected) {
         if (isAnswered) return;
         isAnswered = true;
-        document.querySelectorAll('.option-btn').forEach(b => {
-            if (b.innerText === correct) b.classList.add('correct');
-            else b.style.opacity = "0.5";
+
+        const allBtns = document.querySelectorAll('.option-btn');
+        allBtns.forEach(b => {
+            if (b.innerText === currentCorrectAnswer) b.classList.add('correct');
+            else b.style.opacity = "0.4";
         });
 
-        const statKey = `${current.country} - ${current.name}`;
-        if (selected === correct) {
+        const statKey = `[${current.country}] ${current.name}`;
+        if (selected === currentCorrectAnswer) {
             document.getElementById('result').innerText = "⭕ 정답입니다!";
             document.getElementById('result').style.color = "#2ecc71";
         } else {
             if (btn) btn.classList.add('wrong');
-            document.getElementById('result').innerText = selected === 'IDK' ? `👀 정답: ${correct}` : `❌ 오답! 정답: ${correct}`;
+            document.getElementById('result').innerText = `❌ 정답: ${currentCorrectAnswer}`;
             document.getElementById('result').style.color = "#e74c3c";
             mistakeStats[statKey] = (mistakeStats[statKey] || 0) + 1;
-            questionQueue.push(current); // 오답은 다시 큐에 추가
+            questionQueue.push(current); 
         }
         document.getElementById('next-btn').style.display = "inline-block";
         document.getElementById('idk-btn').style.display = "none";
@@ -206,15 +254,15 @@
     function updateSidebarUI() {
         const remaining = isAnswered ? questionQueue.length : questionQueue.length + 1;
         const solved = initialTotal - remaining + (isAnswered ? 1 : 0);
-        const percent = (solved / initialTotal) * 100;
+        const percent = initialTotal > 0 ? (solved / initialTotal) * 100 : 0;
         document.getElementById('progress-fill').style.width = `${percent}%`;
-        document.getElementById('progress-text').innerText = `남은 문제: ${remaining} / ${initialTotal}`;
+        document.getElementById('progress-text').innerText = `진행: ${solved}/${initialTotal} (미완료: ${remaining})`;
         
         const list = document.getElementById('sb-stat-list');
         list.innerHTML = "";
         Object.entries(mistakeStats).sort((a,b) => b[1] - a[1]).forEach(([name, count]) => {
             const li = document.createElement('li');
-            li.innerHTML = `<span>${name}</span> <span class="badge">${count}회 틀림</span>`;
+            li.innerHTML = `<span>${name}</span> <span class="badge">${count}회</span>`;
             list.appendChild(li);
         });
     }
@@ -223,10 +271,21 @@
         const sQ = localStorage.getItem(PREFIX + 'queue');
         const sS = localStorage.getItem(PREFIX + 'mistakeStats');
         if (sS) mistakeStats = JSON.parse(sS);
-        if (sQ && JSON.parse(sQ).length > 0) {
-            questionQueue = JSON.parse(sQ);
-            initialTotal = parseInt(localStorage.getItem(PREFIX + 'initialTotal'));
-            startGame(false);
+        
+        // 데이터 무결성 검사 (과거 데이터와 섞이지 않게 강제 초기화)
+        if (sQ) {
+            try {
+                let parsed = JSON.parse(sQ);
+                if (parsed.length > 0 && (!parsed[0].name || !parsed[0].country)) {
+                    throw new Error("Old data structure");
+                }
+                questionQueue = parsed;
+                initialTotal = parseInt(localStorage.getItem(PREFIX + 'initialTotal')) || questionQueue.length;
+                startGame(false);
+            } catch(e) {
+                console.warn("데이터 구조 복구 중...");
+                resetAllData();
+            }
         } else {
             startGame(true);
         }
