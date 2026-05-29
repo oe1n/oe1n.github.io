@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>청소 역할 배정</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4EEDF; --panel:#FCFAF3; --cream:#F2E8D0;
+    --ink:#1A1A18; --ink-soft:#6b6a63; --line:#1A1A18;
+    --lime:#DDEB5A; --lime-deep:#B7C73E;
+    --rowh:38px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Pretendard",system-ui,sans-serif;background:var(--paper);color:var(--ink);
+    -webkit-font-smoothing:antialiased;line-height:1.5;
+    background-image:radial-gradient(rgba(26,26,24,.035) 1px, transparent 1px);background-size:22px 22px;
+  }
+  .serif{font-family:"Gowun Batang",serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:34px 22px 80px;}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;
+    border-bottom:2.5px solid var(--line);padding-bottom:16px;margin-bottom:22px;}
+  .eyebrow{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;}
+  h1{font-size:clamp(32px,6vw,54px);margin:6px 0 0;font-weight:700;letter-spacing:-.01em;}
+  .date{font-size:13px;color:var(--ink-soft);text-align:right;white-space:nowrap;}
+
+  .controls{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-bottom:8px;}
+  .btn{font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;border:2px solid var(--ink);
+    background:var(--lime);color:var(--ink);padding:12px 26px;border-radius:2px;
+    transition:transform .08s ease, box-shadow .12s ease;box-shadow:4px 4px 0 var(--ink);}
+  .btn:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink);}
+  .btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn.ghost{background:var(--panel);}
+  .seg{display:inline-flex;border:2px solid var(--ink);border-radius:2px;overflow:hidden;}
+  .seg button{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:none;background:var(--panel);
+    color:var(--ink);padding:9px 14px;border-right:2px solid var(--ink);}
+  .seg button:last-child{border-right:none;}
+  .seg button.on{background:var(--ink);color:var(--paper);}
+  .seg-label{font-size:12px;color:var(--ink-soft);font-weight:600;letter-spacing:.05em;}
+  .status{font-size:13px;color:var(--ink-soft);font-weight:600;min-height:18px;margin:2px 0 18px;}
+  .status b{color:var(--ink);}
+
+  /* roster */
+  .roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+  .pcard{background:var(--panel);border:2px solid var(--ink);border-radius:6px;padding:10px 10px 11px;
+    display:flex;flex-direction:column;gap:8px;box-shadow:3px 3px 0 rgba(26,26,24,.13);}
+  .pcard.fixed{background:var(--cream);}
+  .pname{font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:baseline;gap:6px;}
+  .pnum{font-size:10px;color:var(--ink-soft);font-weight:500;}
+
+  .reel{height:var(--rowh);overflow:hidden;border:2px solid var(--ink);border-radius:4px;background:var(--panel);
+    position:relative;box-shadow:inset 0 6px 7px -7px rgba(0,0,0,.5), inset 0 -6px 7px -7px rgba(0,0,0,.5);}
+  .reel-strip{will-change:transform;}
+  .tile{height:var(--rowh);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;
+    background:var(--rc,var(--panel));color:var(--ink);}
+  .tile.ph{background:var(--panel);color:var(--ink-soft);font-weight:600;}
+  .pcard.locked .reel{animation:lock .36s ease;}
+  @keyframes lock{0%{transform:scale(1);}45%{transform:scale(1.07);box-shadow:0 0 0 4px var(--lime);}100%{transform:scale(1);}}
+
+  .role-pill{height:var(--rowh);border:2px solid var(--ink);border-radius:4px;background:var(--rc,var(--lime));
+    display:flex;align-items:center;justify-content:center;gap:6px;font-weight:700;font-size:14px;}
+  .mini-badge{font-size:9px;background:var(--ink);color:var(--paper);padding:1px 5px;border-radius:2px;letter-spacing:.08em;font-weight:700;}
+
+  /* role colors */
+  .r-broom{--rc:#DDEB5A;} .r-mop{--rc:#BFD7D6;} .r-wipe{--rc:#F0D9B5;}
+  .r-locker{--rc:#CFE0B4;} .r-recycle{--rc:#D9CFE6;} .r-green{--rc:#DDEB5A;} .r-music{--rc:#F2E8D0;}
+
+  /* summary */
+  .summary{margin-top:34px;display:none;}
+  .summary.show{display:block;animation:fade .4s ease both;}
+  @keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .summary h2{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);
+    border-bottom:1.5px solid var(--ink);padding-bottom:8px;margin:0 0 16px;}
+  .grps{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+  .grp{border:2px solid var(--ink);border-radius:5px;overflow:hidden;background:var(--panel);}
+  .grp-h{background:var(--rc);padding:9px 13px;display:flex;justify-content:space-between;align-items:baseline;
+    font-weight:700;border-bottom:2px solid var(--ink);}
+  .grp-h .c{font-family:"Gowun Batang",serif;font-size:14px;}
+  .grp-names{padding:11px 13px;display:flex;flex-wrap:wrap;gap:6px;}
+  .gn{font-size:13px;font-weight:600;background:var(--paper);border:1.5px solid var(--ink);border-radius:99px;padding:3px 9px;}
+  .gn i{font-style:normal;font-size:9px;color:var(--ink-soft);margin-left:3px;}
+
+  footer{margin-top:40px;font-size:12px;color:var(--ink-soft);border-top:1.5px solid var(--ink);
+    padding-top:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  @media(max-width:520px){.roster{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">CLEANING · ROLE ASSIGNMENT</div>
+      <h1 class="serif">청소 역할 배정</h1>
+    </div>
+    <div class="date" id="today"></div>
+  </header>
+
+  <div class="controls">
+    <button class="btn" id="startBtn">배정 시작</button>
+    <button class="btn ghost" id="copyBtn" disabled>결과 복사</button>
+    <span class="seg-label">속도</span>
+    <div class="seg" id="speedSeg">
+      <button data-sp="normal" class="on">보통</button>
+      <button data-sp="fast">빠르게</button>
+      <button data-sp="instant">한번에</button>
+    </div>
+    <button class="btn ghost" id="muteBtn" title="소리 켜기/끄기" style="padding:12px 15px;">🔊</button>
+  </div>
+  <div class="status" id="status">고정 멤버 10명은 미리 배정됨 · 나머지 26명을 룰렛으로 추첨합니다</div>
+
+  <div class="roster" id="roster"></div>
+
+  <div class="summary" id="summary">
+    <h2>배정 결과 요약</h2>
+    <div class="grps" id="grps"></div>
+  </div>
+
+  <footer>
+    <span>그린리더 · 음악실은 고정 멤버이며, 무작위 추첨은 인원수에 정확히 맞춰 배정됩니다.</span>
+    <span id="copiedMsg"></span>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   ▼ 편집 영역 — 명단/고정 멤버는 여기서 바로 수정
+   ============================================================ */
+const STUDENTS = [
+  ['강태양','10201'],['고서윤','10202'],['김건우','10203'],['김민준','10204'],
+  ['김영기','10205'],['김영일','10206'],['김재원','10207'],['박가온','10208'],
+  ['박건희','10209'],['박성빈','10210'],['박성현','10211'],['서용석','10212'],
+  ['선종연','10213'],['송범준','10214'],['송치수','10215'],['안철진','10216'],
+  ['이은찬','10217'],['이장범','10218'],['이정민','10219'],['이준서','10220'],
+  ['이지성','10221'],['이태성','10222'],['장영준','10223'],['장현규','10224'],
+  ['전세호','10225'],['정규용','10226'],['정기헌','10227'],['정주헌','10228'],
+  ['정지운','10229'],['주수영','10230'],['차민오','10231'],['한수완','10232'],
+  ['한준익','10233'],['홍성준','10234'],['홍준보','10235'],['황연우','10236'],
+].map(([name,num])=>({name,num}));
+
+const ROLES = [
+  {id:'broom',   title:'빗자루',          sub:'',                cap:10, fixed:[]},
+  {id:'mop',     title:'대걸레',          sub:'',                cap:4,  fixed:[]},
+  {id:'wipe',    title:'손걸레',          sub:'책상·먼지·창틀',   cap:4,  fixed:[]},
+  {id:'locker',  title:'사물함',          sub:'정리·청소',        cap:4,  fixed:[]},
+  {id:'recycle', title:'분리수거',        sub:'',                cap:4,  fixed:[]},
+  {id:'green',   title:'그린리더',        sub:'',                cap:2,  fixed:['홍준보','주수영']},
+  {id:'music',   title:'음악실 & 합주실', sub:'',                cap:8,
+                 fixed:['김영기','강태양','정기헌','이정민','안철진','홍성준','송범준','한수완']},
+];
+/* ============================================================ ▲ 편집 영역 끝 ============================================================ */
+
+const SPEEDS = { normal:{dur:1700,step:55}, fast:{dur:850,step:28}, instant:{dur:260,step:6} };
+let speed = SPEEDS.normal;
+
+const ROWH = 38, FILLERS = 26;
+const STRIP_LEN = FILLERS + 2;                 // placeholder + fillers + target
+const byName = Object.fromEntries(STUDENTS.map(s=>[s.name,s]));
+const byNum  = Object.fromEntries(STUDENTS.map(s=>[s.num,s]));
+const titleOf = id => ROLES.find(r=>r.id===id).title;
+const RANDOM_ROLES = ROLES.filter(r=>!r.fixed.length);
+const fixedRoleOf = {}; ROLES.forEach(r=>r.fixed.forEach(n=>fixedRoleOf[n]=r.id));
+const $ = id => document.getElementById(id);
+let running=false, lastAssign=null;
+
+/* ── 틱 사운드 엔진 (Web Audio 합성) ─────────────────────── */
+let actx=null, tickBuf=null, comp=null, muted=false;
+
+function makeTick(ctx){
+  // 짧고 날카로운 클릭음: 짧은 노이즈 버스트 + 저주파 바디
+  const SR=ctx.sampleRate, len=Math.floor(SR*0.018);
+  const buf=ctx.createBuffer(1,len,SR);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++){
+    const env=Math.pow(1-i/len,2.8);
+    const noise=(Math.random()*2-1)*0.55;
+    const tone=Math.sin(2*Math.PI*i*3200/SR)*0.45; // 고주파 클릭 톤
+    d[i]=(noise+tone)*env;
+  }
+  return buf;
+}
+
+let masterGain=null;
+async function initAudio(){
+  if(!actx){
+    actx = new (window.AudioContext||window.webkitAudioContext)();
+    // 컴프레서: 빠른 어택으로 겹침 피크 잡기
+    comp = actx.createDynamicsCompressor();
+    comp.threshold.value=-18; comp.ratio.value=16;
+    comp.attack.value=0.0005; comp.release.value=0.06;
+    comp.knee.value=4;
+    // 마스터 gain으로 전체 음량 제한
+    masterGain = actx.createGain();
+    masterGain.gain.value = 0.55;
+    comp.connect(masterGain); masterGain.connect(actx.destination);
+    tickBuf = makeTick(actx);
+  }
+  if(actx.state==='suspended'){ try{ await actx.resume(); }catch(e){} }
+}
+
+function playTick(time, gain, rate){
+  if(muted || !tickBuf || !actx) return;
+  const src=actx.createBufferSource(); src.buffer=tickBuf; src.playbackRate.value=rate||1;
+  const g=actx.createGain(); g.gain.value=gain;
+  src.connect(g); g.connect(comp); src.start(time);
+}
+
+// 감속 bezier: 빠르게 시작 → 끝에서 확 느려지며 틱이 잦아듦 (티디디디딕 느낌)
+const _bz=(a,b,s)=>{const u=1-s;return 3*u*u*s*a+3*u*s*s*b+s*s*s;};
+const bezX=s=>_bz(.04,.18,s), bezY=s=>_bz(.78,1,s);  // 더 급격한 감속
+function invY(target){let lo=0,hi=1,s=.5;for(let i=0;i<32;i++){s=(lo+hi)/2;(bezY(s)<target)?lo=s:hi=s;}return s;}
+
+function scheduleReelTicks(ctxStart, delay, dur){
+  if(muted || !actx) return;
+  const N=STRIP_LEN-1, minGap=0.022; let last=-1;
+  for(let k=1;k<=N;k++){
+    const s=invY(k/N), u=bezX(s);
+    const t=ctxStart + delay/1000 + u*dur/1000;
+    const isLast=(k===N);
+    // 너무 빠른 구간(앞부분)은 일부 스킵해 자연스럽게
+    const dynamicGap = isLast ? 0 : Math.max(0.018, minGap*(1-u*0.5));
+    if(!isLast && t < last+dynamicGap) continue;
+    last=t;
+    // 마지막 틱은 크고 낮게 (묵직한 "딱"), 나머지는 가볍게 "틱"
+    playTick(t, isLast?0.32:0.12, isLast?0.72:1.1);
+  }
+}
+
+$('today').textContent = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+// build roster (학번 순)
+const roster = $('roster');
+STUDENTS.forEach(s=>{
+  const fx = fixedRoleOf[s.name];
+  const card = document.createElement('div');
+  card.className = 'pcard' + (fx?' fixed':'');
+  card.dataset.num = s.num;
+  let bottom;
+  if(fx){
+    bottom = `<div class="role-pill r-${fx}">${titleOf(fx)}<span class="mini-badge">고정</span></div>`;
+  }else{
+    bottom = `<div class="reel"><div class="reel-strip" id="strip-${s.num}"><div class="tile ph">?</div></div></div>`;
+  }
+  card.innerHTML = `<div class="pname">${s.name}<span class="pnum">${s.num}</span></div>${bottom}`;
+  roster.appendChild(card);
+});
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function buildPlan(){
+  const fixedSet=new Set(); ROLES.forEach(r=>r.fixed.forEach(n=>fixedSet.add(n)));
+  const pool=shuffle(STUDENTS.filter(s=>!fixedSet.has(s.name)).slice());
+  const slots=[]; RANDOM_ROLES.forEach(r=>{for(let i=0;i<r.cap;i++)slots.push(r.id);});
+  shuffle(slots);
+  return pool.map((stu,i)=>({stu, roleId:slots[i]}));
+}
+
+function tile(rid,isT){ return `<div class="tile r-${rid}${isT?' target':''}">${titleOf(rid)}</div>`; }
+function buildStrip(targetId){
+  const labels = RANDOM_ROLES.map(r=>r.id);
+  let h = `<div class="tile ph">?</div>`;
+  for(let i=0;i<FILLERS;i++) h += tile(labels[(Math.random()*labels.length)|0], false);
+  h += tile(targetId, true);
+  return h;
+}
+
+async function run(){
+  if(running) return;
+  running=true;
+  $('startBtn').disabled=true; $('copyBtn').disabled=true; $('copiedMsg').textContent='';
+  $('summary').classList.remove('show'); $('status').innerHTML='추첨 중…';
+  document.querySelectorAll('.pcard.locked').forEach(c=>c.classList.remove('locked'));
+  await initAudio();
+  const ctxStart = actx ? actx.currentTime + 0.03 : 0;
+
+  const plan = buildPlan();
+  const fixedAssign=[]; ROLES.forEach(r=>r.fixed.forEach(n=>fixedAssign.push({stu:byName[n],roleId:r.id})));
+  lastAssign = fixedAssign.concat(plan);
+  const target = Object.fromEntries(plan.map(p=>[p.stu.num,p.roleId]));
+
+  let k=0, maxEnd=0;
+  STUDENTS.forEach(s=>{
+    if(fixedRoleOf[s.name]) return;
+    const strip=$('strip-'+s.num);
+    strip.style.transition='none';
+    strip.style.transform='translateY(0)';
+    strip.innerHTML=buildStrip(target[s.num]);
+    void strip.offsetHeight;                       // reflow
+    const delay=k*speed.step, dur=speed.dur, end=delay+dur;
+    strip.style.transition=`transform ${dur}ms cubic-bezier(.12,.62,.2,1) ${delay}ms`;
+    strip.style.transform=`translateY(${-(STRIP_LEN-1)*ROWH}px)`;
+    scheduleReelTicks(ctxStart, delay, dur);
+    const card=strip.closest('.pcard');
+    setTimeout(()=>card.classList.add('locked'), end);
+    maxEnd=Math.max(maxEnd,end);
+    k++;
+  });
+
+  setTimeout(finish, maxEnd+140);
+}
+
+function finish(){
+  // summary grouped by role
+  const grps=$('grps'); grps.innerHTML='';
+  ROLES.forEach(r=>{
+    const names=lastAssign.filter(a=>a.roleId===r.id).map(a=>a.stu);
+    const el=document.createElement('div');
+    el.className=`grp r-${r.id}`;
+    el.innerHTML=`<div class="grp-h"><span>${r.title}${r.fixed.length?' · 고정':''}</span>`
+      +`<span class="c">${names.length}/${r.cap}</span></div>`
+      +`<div class="grp-names">${names.map(n=>`<span class="gn">${n.name}<i>${n.num}</i></span>`).join('')}</div>`;
+    grps.appendChild(el);
+  });
+  $('summary').classList.add('show');
+  $('status').innerHTML=`<b>배정 완료!</b> 총 ${STUDENTS.length}명`;
+  $('startBtn').disabled=false; $('startBtn').textContent='다시 배정';
+  $('copyBtn').disabled=false;
+  running=false;
+  burstConfetti();
+}
+
+function resultText(){
+  let lines=['청소 역할 배정 결과','─────────────'];
+  ROLES.forEach(r=>{
+    const names=lastAssign.filter(a=>a.roleId===r.id).map(a=>a.stu.name);
+    lines.push(`[${r.title}${r.fixed.length?' (고정)':''}] (${names.length}/${r.cap})`);
+    lines.push('  '+names.join(', '));
+  });
+  return lines.join('\n');
+}
+
+$('startBtn').addEventListener('click', run);
+$('copyBtn').addEventListener('click', async()=>{
+  try{ await navigator.clipboard.writeText(resultText()); $('copiedMsg').textContent='✓ 결과가 복사되었습니다'; }
+  catch(e){ $('copiedMsg').textContent='복사 실패 — 직접 선택해 복사하세요'; }
+});
+$('speedSeg').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b||running) return;
+  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); speed=SPEEDS[b.dataset.sp];
+});
+$('muteBtn').addEventListener('click', ()=>{
+  muted=!muted; $('muteBtn').textContent = muted ? '🔇' : '🔊';
+});
+
+function burstConfetti(){
+  const c=document.createElement('canvas');
+  c.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:9999;';
+  document.body.appendChild(c);
+  const ctx=c.getContext('2d'), dpr=window.devicePixelRatio||1;
+  c.width=innerWidth*dpr; c.height=innerHeight*dpr; ctx.scale(dpr,dpr);
+  const cols=['#DDEB5A','#F2E8D0','#1A1A18','#B7C73E','#ffffff','#BFD7D6'];
+  const P=Array.from({length:170},()=>({x:Math.random()*innerWidth,y:-20-Math.random()*innerHeight*0.4,
+    r:5+Math.random()*8,col:cols[(Math.random()*cols.length)|0],vy:2.4+Math.random()*4.2,
+    vx:-2.4+Math.random()*4.8,rot:Math.random()*6.28,vr:-0.22+Math.random()*0.44}));
+  const t0=performance.now();
+  (function f(t){const el=t-t0;ctx.clearRect(0,0,innerWidth,innerHeight);
+    P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.05;p.rot+=p.vr;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.col;
+      ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*0.62);ctx.restore();});
+    if(el<3200)requestAnimationFrame(f);else c.remove();})(t0);
+}
+</script>
+</body>
+</html>
