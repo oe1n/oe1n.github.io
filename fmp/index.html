@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Now Playing — Green Screen</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00b140;
+    --bar: #ffffff;
+    --text: #111111;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: 'Inter', 'Noto Sans KR', sans-serif; }
+  body { background: #1a1a1f; color: #fff; display: flex; min-height: 100vh; }
+
+  /* Control panel */
+  .panel {
+    width: 320px;
+    background: #15151a;
+    padding: 26px 22px;
+    border-right: 1px solid rgba(255,255,255,0.06);
+    overflow-y: auto;
+  }
+  .panel h1 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .panel .sub { font-size: 12px; color: rgba(255,255,255,0.55); margin-bottom: 22px; }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 7px;
+  }
+  .field input, .field select {
+    width: 100%;
+    padding: 10px 12px;
+    background: #1f1f25;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #fff;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 14px;
+  }
+  .field input:focus, .field select:focus { outline: none; border-color: #fff; }
+  .row { display: flex; gap: 10px; }
+  .row .field { flex: 1; }
+  .btn {
+    width: 100%;
+    padding: 12px;
+    background: #fff;
+    color: #111;
+    border: none;
+    border-radius: 7px;
+    font: inherit;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .btn.secondary { background: #2a2a32; color: #fff; }
+  .btn:active { transform: scale(0.98); }
+  .hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 16px;
+    line-height: 1.6;
+  }
+
+  /* Stage */
+  .stage {
+    flex: 1;
+    background: var(--green);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ===================== Animation wrapper ===================== */
+  /* Position bottom-left by default, configurable */
+  .lower3 {
+    position: absolute;
+    left: 8%;
+    bottom: 14%;
+    display: flex;
+    align-items: stretch;
+    height: 96px;
+    /* prevent layout shrink as bar grows */
+  }
+  .stage.center .lower3 { left: 50%; bottom: 50%; transform: translate(-50%, 50%); }
+  .stage.br .lower3 { left: auto; right: 8%; }
+  .stage.tl .lower3 { bottom: auto; top: 14%; }
+  .stage.tr .lower3 { bottom: auto; top: 14%; left: auto; right: 8%; }
+
+  /* The vertical bar — rises from the bottom */
+  .bar {
+    width: 8px;
+    background: var(--bar);
+    border-radius: 0px;
+    transform-origin: bottom center;
+    transform: scaleY(0);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18), 0 0 20px rgba(0,0,0,0.1);
+  }
+
+  /* Text container — no background, clip-path reveals text left→right */
+  .panel-reveal {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .panel-inner {
+    padding: 0 36px 0 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    color: var(--bar);
+    clip-path: inset(0 100% 0 0);
+    transform: translateX(-16px);
+    text-shadow:
+      0 2px 6px rgba(0,0,0,0.25),
+      0 1px 2px rgba(0,0,0,0.2),
+      0 0 18px rgba(0,0,0,0.15);
+  }
+
+  .label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    line-height: 1;
+  }
+  .title {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+  }
+  .artist {
+    font-size: 16px;
+    font-weight: 500;
+    opacity: 0.85;
+    line-height: 1;
+  }
+
+  /* ============== Animation sequence ==============
+     Bar ONLY rises (start) and falls (end). No closing sweep.
+     0.00 - 0.45s : bar rises
+     0.50 - 1.20s : panel sweeps right (revealed beside the standing bar)
+     1.15 - 1.55s : text fades/slides in
+     1.55 - 4.80s : hold
+     4.80 - 5.10s : text fades out
+     5.10 - 5.55s : bar falls (panel rides down with it — bar only does up/down)
+  */
+  .lower3.play .bar {
+    animation: barRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards,
+               barDrop 0.45s cubic-bezier(0.7, 0, 0.84, 0) 5.10s forwards;
+  }
+  .lower3.play .panel-inner {
+    animation: textIn  0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards,
+               flicker 0.2s  steps(1, end)                  1.0s 1,
+               textOut 0.6s  cubic-bezier(0.7, 0, 0.84, 0)  4.6s forwards;
+  }
+
+  @keyframes barRise {
+    from { transform: scaleY(0); }
+    to   { transform: scaleY(1); }
+  }
+  @keyframes barDrop {
+    from { transform: scaleY(1); }
+    to   { transform: scaleY(0); }
+  }
+  @keyframes flicker {
+    0%   { opacity: 1; }
+    25%  { opacity: 0; }
+    50%  { opacity: 1; }
+    75%  { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes textIn {
+    from { clip-path: inset(0 100% 0 0); transform: translateX(-16px); }
+    to   { clip-path: inset(0 0 0 0);    transform: translateX(0); }
+  }
+  @keyframes textOut {
+    from { clip-path: inset(0 0 0 0);    transform: translateX(0); }
+    to   { clip-path: inset(0 100% 0 0); transform: translateX(-16px); }
+  }
+
+  /* Hidden measurer so we can size the panel to the text exactly */
+  .measure {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+  <aside class="panel">
+    <h1>Now Playing Generator</h1>
+    <p class="sub">White bar rise → sweep reveal → fade out</p>
+
+    <div class="field">
+      <label>Track Title</label>
+      <input id="i-title" type="text" value="좋은 날" />
+    </div>
+    <div class="field">
+      <label>Artist</label>
+      <input id="i-artist" type="text" value="아이유 (IU)" />
+    </div>
+    <div class="field">
+      <label>Label</label>
+      <input id="i-label" type="text" value="NOW PLAYING" />
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Bar Color</label>
+        <input id="i-bar" type="color" value="#ffffff" />
+      </div>
+      <div class="field">
+        <label>Chroma</label>
+        <select id="i-chroma">
+          <option value="#00b140">Green</option>
+          <option value="#0000ff">Blue</option>
+          <option value="#ff00ff">Magenta</option>
+          <option value="#000000">Black</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Position</label>
+      <select id="i-pos">
+        <option value="bl" selected>Bottom Left</option>
+        <option value="br">Bottom Right</option>
+        <option value="tl">Top Left</option>
+        <option value="tr">Top Right</option>
+        <option value="center">Center</option>
+      </select>
+    </div>
+
+    <button class="btn" onclick="play()">▶ Play Animation</button>
+    <button class="btn secondary" onclick="toggleFullscreen()">Fullscreen Stage</button>
+    <button class="btn" id="btn-export" onclick="exportMp4()" style="margin-top:10px;background:#22c55e;color:#0a1f0d;">⬇ Export MP4</button>
+    <div id="export-status" style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:8px;min-height:14px;"></div>
+
+    <p class="hint">
+      • 약 6초 시퀀스 — 막대 상승 → 패널 스윕 → 텍스트 → 닫힘<br>
+      • OBS / QuickTime 으로 녹화 후 편집기에서 크로마키 적용<br>
+      • 텍스트 수정 시 자동으로 패널 너비가 맞춰집니다
+    </p>
+  </aside>
+
+  <main class="stage bl" id="stage">
+    <div class="lower3" id="lower3">
+      <div class="bar"></div>
+      <div class="panel-reveal">
+        <div class="panel-inner">
+          <div class="label" id="t-label">NOW PLAYING</div>
+          <div class="title" id="t-title">좋은 날</div>
+          <div class="artist" id="t-artist">아이유 (IU)</div>
+        </div>
+      </div>
+    </div>
+    <div class="measure" id="measure"></div>
+  </main>
+
+<script src="ffmpeg/ffmpeg.js"></script>
+<script>
+  // Inline replacements for @ffmpeg/util (avoid extra script tag)
+  async function fetchFile(blob) {
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+  async function toBlobURL(url, mime) {
+    const res = await fetch(url);
+    const buf = await res.arrayBuffer();
+    return URL.createObjectURL(new Blob([buf], { type: mime }));
+  }
+</script>
+<script>
+  const $ = id => document.getElementById(id);
+  const stage = $('stage');
+  const lower3 = $('lower3');
+  const measure = $('measure');
+
+  function update() {
+    $('t-title').textContent = $('i-title').value || ' ';
+    $('t-artist').textContent = $('i-artist').value || ' ';
+    $('t-label').textContent = ($('i-label').value || ' ').toUpperCase();
+    document.documentElement.style.setProperty('--bar', $('i-bar').value);
+    document.documentElement.style.setProperty('--green', $('i-chroma').value);
+    stage.style.background = $('i-chroma').value;
+
+    const pos = $('i-pos').value;
+    stage.className = 'stage ' + pos;
+
+    // Measure required width
+    measureWidth();
+  }
+
+  function measureWidth() {
+    const inner = document.querySelector('.panel-inner').cloneNode(true);
+    inner.style.opacity = '1';
+    inner.style.transform = 'none';
+    measure.innerHTML = '';
+    measure.appendChild(inner);
+    const w = inner.getBoundingClientRect().width;
+    lower3.style.setProperty('--panel-w', Math.ceil(w) + 'px');
+  }
+
+  function play() {
+    measureWidth();
+    lower3.classList.remove('play');
+    void lower3.offsetWidth;
+    lower3.classList.add('play');
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) stage.requestFullscreen();
+    else document.exitFullscreen();
+  }
+
+  ['i-title','i-artist','i-label','i-bar','i-chroma','i-pos']
+    .forEach(id => $(id).addEventListener('input', update));
+
+  update();
+  // Auto-play once on load
+  setTimeout(play, 400);
+
+  // ============ MP4 Export via getDisplayMedia + ffmpeg.wasm ============
+  const ANIM_DURATION_MS = 6000; // total animation length (matches CSS sequence)
+  let ffmpegInstance = null;
+
+  function setStatus(msg) { $('export-status').textContent = msg; }
+
+  async function loadFfmpeg() {
+    if (ffmpegInstance) return ffmpegInstance;
+    setStatus('ffmpeg 로딩 중... (~30MB)');
+    const { FFmpeg } = FFmpegWASM;
+    const baseURL = 'ffmpeg';
+    const ffmpeg = new FFmpeg();
+    ffmpeg.on('progress', ({ progress }) => {
+      const pct = Math.round(clamp(progress, 0, 1) * 100);
+      setStatus(`MP4 인코딩 ${pct}%`);
+    });
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+    });
+    ffmpegInstance = ffmpeg;
+    return ffmpeg;
+  }
+
+  // ---------- Canvas renderer (mirrors the CSS animation) ----------
+  const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
+  const easeInQuint  = t => t * t * t * t * t;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  function readOpts() {
+    return {
+      title:  $('i-title').value  || ' ',
+      artist: $('i-artist').value || ' ',
+      label:  ($('i-label').value || ' ').toUpperCase(),
+      bar:    $('i-bar').value,
+      chroma: $('i-chroma').value,
+    };
+  }
+
+  function renderFrame(ctx, t, opts, layout) {
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const S = layout.S;
+
+    ctx.fillStyle = opts.chroma;
+    ctx.fillRect(0, 0, W, H);
+
+    const baseX = layout.baseX;
+    const baseY = layout.baseY;
+    const barW = 8 * S;
+    const barH = 96 * S;
+
+    // Bar
+    let barScale = 0;
+    if (t < 0.05) barScale = 0;
+    else if (t < 0.5) barScale = easeOutQuint((t - 0.05) / 0.45);
+    else if (t < 5.1) barScale = 1;
+    else if (t < 5.55) barScale = 1 - easeInQuint((t - 5.1) / 0.45);
+
+    if (barScale > 0.001) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.18)';
+      ctx.shadowBlur = 8 * S;
+      ctx.shadowOffsetY = 2 * S;
+      ctx.fillStyle = opts.bar;
+      const h = barH * barScale;
+      ctx.fillRect(baseX, baseY - h, barW, h);
+      ctx.restore();
+    }
+
+    // Text
+    let revealP = 0, offsetPx = -16 * S, visible = false;
+    if (t >= 0.5 && t < 1.25) {
+      const p = (t - 0.5) / 0.75;
+      revealP = easeOutQuint(p);
+      offsetPx = (-16 + 16 * easeOutQuint(p)) * S;
+      visible = true;
+    } else if (t >= 1.25 && t < 4.6) {
+      revealP = 1; offsetPx = 0; visible = true;
+    } else if (t >= 4.6 && t < 5.2) {
+      const p = (t - 4.6) / 0.6;
+      revealP = 1 - easeInQuint(p);
+      offsetPx = -16 * easeInQuint(p) * S;
+      visible = true;
+    }
+
+    // Flicker (1.0–1.2s): on/off/on/off
+    let on = true;
+    if (t >= 1.0 && t < 1.2) {
+      const p = (t - 1.0) / 0.2;
+      on = (p < 0.25) || (p >= 0.5 && p < 0.75);
+    }
+
+    if (visible && on && revealP > 0.001) {
+      const textX = baseX + barW + 22 * S + offsetPx;
+      const cy = baseY - barH / 2;
+
+      const labelSize = 12 * S;
+      const titleSize = 32 * S;
+      const artistSize = 16 * S;
+      const gap = 6 * S;
+      const totalH = labelSize + gap + titleSize + gap + artistSize;
+      let y = cy - totalH / 2;
+
+      ctx.save();
+      const clipW = 1500 * S * revealP;
+      ctx.beginPath();
+      ctx.rect(textX, y - 12 * S, clipW, totalH + 24 * S);
+      ctx.clip();
+
+      ctx.fillStyle = opts.bar;
+      ctx.shadowColor = 'rgba(0,0,0,0.25)';
+      ctx.shadowBlur = 6 * S;
+      ctx.shadowOffsetY = 2 * S;
+      ctx.textBaseline = 'top';
+
+      // Label
+      ctx.globalAlpha = 0.7;
+      if ('letterSpacing' in ctx) ctx.letterSpacing = `${0.22 * labelSize}px`;
+      ctx.font = `700 ${labelSize}px Inter, "Noto Sans KR", sans-serif`;
+      ctx.fillText(opts.label, textX, y);
+      y += labelSize + gap;
+
+      // Title
+      ctx.globalAlpha = 1;
+      if ('letterSpacing' in ctx) ctx.letterSpacing = `${-0.015 * titleSize}px`;
+      ctx.font = `800 ${titleSize}px Inter, "Noto Sans KR", sans-serif`;
+      ctx.fillText(opts.title, textX, y);
+      y += titleSize + gap;
+
+      // Artist
+      ctx.globalAlpha = 0.85;
+      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+      ctx.font = `500 ${artistSize}px Inter, "Noto Sans KR", sans-serif`;
+      ctx.fillText(opts.artist, textX, y);
+
+      ctx.restore();
+    }
+  }
+
+  function computeLayout(opts) {
+    const S = 2; // scale (designed against 540px-tall preview)
+    const barW = 8 * S, barH = 96 * S;
+    const labelSize = 12 * S, titleSize = 32 * S, artistSize = 16 * S;
+    // Measure text widths on an offscreen ctx
+    const m = document.createElement('canvas').getContext('2d');
+    function measure(text, font, ls) {
+      m.font = font;
+      if ('letterSpacing' in m) m.letterSpacing = ls;
+      return m.measureText(text).width + (ls ? Math.abs(parseFloat(ls)) * text.length : 0);
+    }
+    const wLabel  = measure(opts.label,  `700 ${labelSize}px Inter, "Noto Sans KR", sans-serif`, `${0.22 * labelSize}px`);
+    const wTitle  = measure(opts.title,  `800 ${titleSize}px Inter, "Noto Sans KR", sans-serif`, `${-0.015 * titleSize}px`);
+    const wArtist = measure(opts.artist, `500 ${artistSize}px Inter, "Noto Sans KR", sans-serif`, '0px');
+    const maxTextW = Math.max(wLabel, wTitle, wArtist);
+
+    const padL = 24 * S; // room for left translateX(-16) + shadow
+    const padR = 36 * S; // right-side padding
+    const padTop = 16 * S, padBot = 16 * S;
+
+    const W = Math.ceil(padL + barW + 22 * S + maxTextW + padR);
+    const H = Math.ceil(padTop + barH + padBot);
+    // Even dims for H.264
+    return {
+      S, width: W + (W % 2), height: H + (H % 2),
+      baseX: padL, baseY: padTop + barH,
+      maxTextW,
+    };
+  }
+
+  async function recordStage() {
+    // wait for fonts
+    if (document.fonts && document.fonts.ready) {
+      try { await document.fonts.ready; } catch {}
+    }
+    const opts = readOpts();
+    const layout = computeLayout(opts);
+    const canvas = document.createElement('canvas');
+    canvas.width = layout.width; canvas.height = layout.height;
+    const ctx = canvas.getContext('2d');
+    renderFrame(ctx, 0, opts, layout);
+
+    const stream = canvas.captureStream(60);
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9' : 'video/webm';
+    const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 12_000_000 });
+    const chunks = [];
+    recorder.ondataavailable = e => e.data.size && chunks.push(e.data);
+    const done = new Promise(r => recorder.onstop = () => r(new Blob(chunks, { type: 'video/webm' })));
+
+    setStatus('녹화 중... (캔버스 렌더링)');
+    recorder.start();
+    const DURATION = 6.0;
+    const start = performance.now();
+    await new Promise(resolve => {
+      function frame() {
+        const t = (performance.now() - start) / 1000;
+        renderFrame(ctx, Math.min(t, DURATION), opts, layout);
+        if (t >= DURATION) resolve();
+        else requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    });
+    // small tail so encoder flushes the last frame
+    await new Promise(r => setTimeout(r, 200));
+    recorder.stop();
+    return done;
+  }
+
+  async function exportMp4() {
+    const btn = $('btn-export');
+    btn.disabled = true;
+    try {
+      const ffmpeg = await loadFfmpeg();
+      const webmBlob = await recordStage();
+      setStatus('MP4 변환 중...');
+      await ffmpeg.writeFile('in.webm', await fetchFile(webmBlob));
+      await ffmpeg.exec([
+        '-i', 'in.webm',
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '18',
+        '-pix_fmt', 'yuv420p',
+        '-movflags', '+faststart',
+        'out.mp4',
+      ]);
+      const data = await ffmpeg.readFile('out.mp4');
+      const blob = new Blob([data.buffer], { type: 'video/mp4' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `now-playing-${Date.now()}.mp4`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setStatus('완료! 다운로드 시작.');
+    } catch (e) {
+      console.error(e);
+      setStatus('오류: ' + (e.message || e));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
