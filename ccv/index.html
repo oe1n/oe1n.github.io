@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Green Screen Chat Video</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #00ff00;
+        overflow: hidden;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+          "Noto Sans KR", sans-serif;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      /* 8:9 stage — sized to fit the viewport */
+      .stage {
+        aspect-ratio: 8 / 9;
+        width: min(100vw, calc(100vh * 8 / 9));
+        height: min(100vh, calc(100vw * 9 / 8));
+        background: #00ff00;
+        padding: 5% 4%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 1.4%;
+        overflow: hidden;
+        position: relative;
+      }
+      .row {
+        display: flex;
+        width: 100%;
+      }
+      .row.me {
+        justify-content: flex-end;
+      }
+      .row.you {
+        justify-content: flex-start;
+      }
+
+      .bubble {
+        max-width: 78%;
+        padding: 16px 22px;
+        border-radius: 26px;
+        font-size: 34px;
+        font-weight: 500;
+        line-height: 1.35;
+        /* Allow wrapping at max-width instead of clipping; keep Korean words together,
+           and fall back to breaking long unbroken runs (URLs, English words). */
+        white-space: normal;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+        overflow: hidden;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+        will-change: width, transform, opacity;
+      }
+      .row.me .bubble {
+        background: #fee500;
+        color: #111;
+        border-bottom-right-radius: 8px;
+        transform-origin: bottom right;
+      }
+      .row.you .bubble {
+        background: #ffffff;
+        color: #111;
+        border-bottom-left-radius: 8px;
+        transform-origin: bottom left;
+      }
+
+      .row.system {
+        justify-content: center;
+      }
+      .row.system .bubble {
+        background: rgba(0, 0, 0, 0.55);
+        color: #fff;
+        font-size: 22px;
+        font-weight: 400;
+        padding: 8px 18px;
+        border-radius: 18px;
+        box-shadow: none;
+        transform-origin: bottom center;
+      }
+
+      .controls {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 10;
+        background: rgba(0, 0, 0, 0.65);
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-family: sans-serif;
+        font-size: 14px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .controls button {
+        padding: 6px 14px;
+        border: 0;
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .controls.hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls" id="controls">
+      <button id="play">▶ Play</button>
+      <span>BPM: <b id="bpm-label"></b></span>
+      <button id="reset">Reset</button>
+      <button id="hide">Hide UI (press H)</button>
+    </div>
+
+    <div class="stage" id="stage"></div>
+
+    <script>
+      // ============================================================
+      // CONFIG — edit BPM and chatData below
+      // ============================================================
+      const BPM = 123;
+
+      // type: 'me' | 'you' | 'system' | 'wait'
+      // message: string[]  → each entry consumes ONE beat; parts are trimmed and joined with a space.
+      // wait.beat: number  → number of beats to wait
+      // Cast: 현규(영준의 영혼) = me / 영준(현규의 영혼) = you
+      const chatData = [
+        // Setup
+        { type: "system", message: ["몸이 바뀐 둘이", "카톡으로 처음 마주한다"] },
+        { type: "wait", beat: 2 },
+
+        // 현규: 너 누구야? 나랑 몸이 바뀐 것 같아
+        { type: "me", message: ["너", "누구야?", "나랑", "몸이", "바뀐", "것 같아"] },
+        { type: "wait", beat: 1 },
+
+        // 영준: 응 그런 것 같네
+        { type: "you", message: ["응", "그런 것", "같네"] },
+        { type: "wait", beat: 1 },
+
+        // 현규: 왜 몸이 바뀐거야 짚이는 이유라도 있어?
+        { type: "me", message: ["왜", "몸이", "바뀐거야", "짚이는", "이유라도", "있어?"] },
+        { type: "wait", beat: 1 },
+
+        // 영준: 나도 잘 모르겠어 너무 혼란스러워
+        { type: "you", message: ["나도", "잘", "모르겠어", "너무", "혼란스러워"] },
+        { type: "wait", beat: 1 },
+
+        // 현규: 하.. 그럼 일단 서로 정보 공유부터 하자 난 대죤소신고야 너는?
+        { type: "me", message: ["하..", "그럼 일단", "서로", "정보 공유부터", "하자", "난", "대죤소신고야", "너는?"] },
+        { type: "wait", beat: 1 },
+
+        // 영준: 난 대전대쉰고 니 고등학교에서 2km정도 떨어져 있어
+        { type: "you", message: ["난 대전대쉰고", "니 고등학교에서", "2km정도", "떨어져 있어"] },
+        { type: "wait", beat: 1 },
+
+        // 현규: 그래 일단 알겠어 당장은 우리 몸을 돌려놓을 수단이 없으니 서로의 학교생활을 충실히 하자고
+        { type: "me", message: ["그래", "일단 알겠어", "당장은", "우리 몸을", "돌려놓을", "수단이 없으니", "서로의", "학교생활을", "충실히", "하자고"] },
+        { type: "wait", beat: 1 },
+
+        // 현규: 곧 있으면 기말고사니까 서로 시험 잘봐주자 난 자신있어 어때?
+        { type: "me", message: ["곧 있으면", "기말고사니까", "서로", "시험", "잘봐주자", "난", "자신있어", "어때?"] },
+        { type: "wait", beat: 1 },
+
+        // 영준: 아... 난 공부에 자신이 없는데 굳이 시험을 잘봐야 할까?
+        { type: "you", message: ["아...", "난 공부에", "자신이 없는데", "굳이", "시험을", "잘봐야 할까?"] },
+        { type: "wait", beat: 1 },
+
+        // 현규: 그게 무슨 소리야 공부는 열심히만 하면 돼 나랑 같이 하자
+        { type: "me", message: ["그게", "무슨 소리야", "공부는", "열심히만", "하면 돼", "나랑", "같이 하자"] },
+        { type: "wait", beat: 1 },
+
+        // 현규: 내가 도와줄게
+        { type: "me", message: ["내가", "도와줄게"] },
+        { type: "wait", beat: 1 },
+
+        // 영준: 그래 알겠어 같이 해보자
+        { type: "you", message: ["그래", "알겠어", "같이", "해보자"] },
+        { type: "wait", beat: 1 },
+
+        // 현규: 좋아 할 수 있어!
+        { type: "me", message: ["좋아", "할 수", "있어!"] },
+        { type: "wait", beat: 2 },
+
+        // Scene transition
+        { type: "system", message: ["— 시간 경과 —", "시험 기간이 거의 끝났다"] },
+        { type: "wait", beat: 2 },
+
+        // 현규: 이제 시험도 끝나가네 공부는 잘했어?
+        { type: "me", message: ["이제", "시험도", "끝나가네", "공부는", "잘했어?"] },
+        { type: "wait", beat: 1 },
+
+        // 영준: 응 잘 끝냈어 (말과 다르게 그의 표정은 좋지 않음)
+        { type: "you", message: ["응", "잘", "끝냈어"] },
+        { type: "system", message: ["(말과 다르게", "그의 표정은", "좋지 않음)"] },
+        { type: "wait", beat: 1 },
+
+        // 현규: 혹시 시험이 끝나면 서로 이름을 여기에 써놓기로 할래?
+        { type: "me", message: ["혹시", "시험이 끝나면", "서로", "이름을", "여기에", "써놓기로 할래?"] },
+        { type: "wait", beat: 1 },
+
+        // 현규: 다시 몸이 바뀌면 이순간을 기억하고 싶어
+        { type: "me", message: ["다시", "몸이", "바뀌면", "이 순간을", "기억하고 싶어"] },
+        { type: "wait", beat: 1 },
+
+        // 영준: 응 그러자
+        { type: "you", message: ["응", "그러자"] },
+      ];
+
+      // ============================================================
+      // ENGINE
+      // ============================================================
+      const beatMs = 60000 / BPM;
+      const stage = document.getElementById("stage");
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      // Absolute-time scheduler: every beat fires at sequenceStart + N*beatMs,
+      // so animation cost and setTimeout drift never push later beats late.
+      let sequenceStart = 0;
+      let currentBeat = 0;
+      async function advanceBeats(n) {
+        currentBeat += n;
+        const target = sequenceStart + currentBeat * beatMs;
+        const delay = target - performance.now();
+        if (delay > 0) await sleep(delay);
+      }
+
+      // Damped-harmonic spring. Returns a cancel fn.
+      function spring(from, to, onUpdate, opts = {}) {
+        const { stiffness = 220, damping = 18, mass = 1, onDone } = opts;
+        let value = from,
+          velocity = 0,
+          last = performance.now(),
+          raf,
+          cancelled = false;
+        function step(now) {
+          if (cancelled) return;
+          let dt = (now - last) / 1000;
+          last = now;
+          if (dt > 1 / 30) dt = 1 / 30;
+          const sub = 6,
+            sdt = dt / sub;
+          for (let i = 0; i < sub; i++) {
+            const force = -stiffness * (value - to);
+            const drag = -damping * velocity;
+            velocity += ((force + drag) / mass) * sdt;
+            value += velocity * sdt;
+          }
+          onUpdate(value);
+          if (Math.abs(velocity) < 0.02 && Math.abs(value - to) < 0.05) {
+            onUpdate(to);
+            onDone && onDone();
+            return;
+          }
+          raf = requestAnimationFrame(step);
+        }
+        raf = requestAnimationFrame(step);
+        return () => {
+          cancelled = true;
+          cancelAnimationFrame(raf);
+        };
+      }
+
+      // Measure the natural width the bubble would have for given text, respecting its style.
+      function measureBubbleWidth(refBubble, text) {
+        const clone = refBubble.cloneNode(false);
+        const cs = window.getComputedStyle(refBubble);
+        clone.textContent = text;
+        clone.style.width = "auto";
+        clone.style.maxWidth = cs.maxWidth;
+        clone.style.position = "absolute";
+        clone.style.visibility = "hidden";
+        clone.style.left = "-99999px";
+        clone.style.top = "0";
+        // mount in the row so % max-widths resolve correctly
+        refBubble.parentElement.appendChild(clone);
+        const w = clone.getBoundingClientRect().width;
+        clone.remove();
+        // +2px buffer prevents subpixel clipping of the last glyph
+        return Math.ceil(w) + 2;
+      }
+
+      // Append a part to the bubble as an inline-block span so that:
+      //   - The bubble grows naturally and CSS handles wrapping (no width-spring reflow jank).
+      //   - Each part gets its own scale+opacity spring, regardless of whether it lands on
+      //     the same line or a wrapped new line.
+      function appendPart(bubble, text, animated) {
+        if (bubble.childNodes.length > 0) {
+          // Space between parts; also serves as a valid line-break point.
+          bubble.appendChild(document.createTextNode(" "));
+        }
+        const span = document.createElement("span");
+        span.textContent = text;
+        span.style.display = "inline-block";
+        span.style.transformOrigin = "left center";
+        bubble.appendChild(span);
+        if (animated) {
+          span.style.opacity = "0";
+          span.style.transform = "scale(0.3)";
+          spring(
+            0.3,
+            1,
+            (v) => {
+              span.style.transform = `scale(${v})`;
+            },
+            { stiffness: 520, damping: 20 },
+          );
+          spring(
+            0,
+            1,
+            (v) => {
+              span.style.opacity = Math.max(0, Math.min(1, v));
+            },
+            { stiffness: 500, damping: 32 },
+          );
+        }
+      }
+
+      async function playMessage(item) {
+        const row = document.createElement("div");
+        row.className = "row " + item.type;
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.style.opacity = "0";
+        bubble.style.transform = "scale(0.4)";
+        row.appendChild(bubble);
+        stage.appendChild(row);
+
+        // First part appears with the bubble's own pop-in (no per-part spring).
+        appendPart(bubble, (item.message[0] || "").trim(), false);
+
+        spring(
+          0.4,
+          1,
+          (v) => {
+            bubble.style.transform = `scale(${v})`;
+          },
+          { stiffness: 520, damping: 20 },
+        );
+        spring(
+          0,
+          1,
+          (v) => {
+            bubble.style.opacity = Math.max(0, Math.min(1, v));
+          },
+          { stiffness: 500, damping: 32 },
+        );
+
+        await advanceBeats(1);
+
+        // Subsequent parts: each one springs in independently.
+        for (let i = 1; i < item.message.length; i++) {
+          const part = (item.message[i] || "").trim();
+          if (part) appendPart(bubble, part, true);
+          await advanceBeats(1);
+        }
+      }
+
+      async function run() {
+        stage.innerHTML = "";
+        sequenceStart = performance.now();
+        currentBeat = 0;
+        for (const item of chatData) {
+          if (item.type === "wait") {
+            await advanceBeats(item.beat || 1);
+          } else {
+            await playMessage(item);
+          }
+        }
+      }
+
+      // UI
+      document.getElementById("bpm-label").textContent = BPM;
+      document.getElementById("play").onclick = run;
+      document.getElementById("reset").onclick = () => {
+        stage.innerHTML = "";
+      };
+      document.getElementById("hide").onclick = () =>
+        document.getElementById("controls").classList.toggle("hidden");
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "h" || e.key === "H")
+          document.getElementById("controls").classList.toggle("hidden");
+        if (e.key === " ") {
+          e.preventDefault();
+          run();
+        }
+      });
+    </script>
+  </body>
+</html>
