@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>자리 배치</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4EEDF; --panel:#FCFAF3; --cream:#F2E8D0;
+    --ink:#1A1A18; --ink-soft:#6b6a63; --line:#1A1A18;
+    --lime:#DDEB5A; --lime-deep:#B7C73E;
+    --rowh:52px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:"Pretendard",system-ui,sans-serif;background:var(--paper);color:var(--ink);
+    -webkit-font-smoothing:antialiased;line-height:1.5;
+    background-image:radial-gradient(rgba(26,26,24,.035) 1px, transparent 1px);background-size:22px 22px;
+  }
+  .serif{font-family:"Gowun Batang",serif;}
+  .wrap{max-width:1180px;margin:0 auto;padding:34px 22px 80px;}
+
+  header{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;
+    border-bottom:2.5px solid var(--line);padding-bottom:16px;margin-bottom:22px;}
+  .eyebrow{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;}
+  h1{font-size:clamp(32px,6vw,54px);margin:6px 0 0;font-weight:700;letter-spacing:-.01em;}
+  .date{font-size:13px;color:var(--ink-soft);text-align:right;white-space:nowrap;}
+
+  .controls{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-bottom:8px;}
+  .btn{font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;border:2px solid var(--ink);
+    background:var(--lime);color:var(--ink);padding:12px 26px;border-radius:2px;
+    transition:transform .08s ease, box-shadow .12s ease;box-shadow:4px 4px 0 var(--ink);}
+  .btn:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink);}
+  .btn:active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .btn.ghost{background:var(--panel);}
+  .seg{display:inline-flex;border:2px solid var(--ink);border-radius:2px;overflow:hidden;}
+  .seg button{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:none;background:var(--panel);
+    color:var(--ink);padding:9px 14px;border-right:2px solid var(--ink);}
+  .seg button:last-child{border-right:none;}
+  .seg button.on{background:var(--ink);color:var(--paper);}
+  .seg-label{font-size:12px;color:var(--ink-soft);font-weight:600;letter-spacing:.05em;}
+  .status{font-size:13px;color:var(--ink-soft);font-weight:600;min-height:18px;margin:2px 0 18px;}
+  .status b{color:var(--ink);}
+
+  /* 교실 방향 표시 */
+  .front{display:flex;align-items:center;justify-content:center;gap:12px;margin:4px 0 16px;}
+  .front .bar{flex:1;height:2px;background:var(--ink);opacity:.25;}
+  .front .lbl{font-family:"Gowun Batang",serif;font-size:13px;letter-spacing:.28em;color:var(--ink-soft);
+    border:2px solid var(--ink);background:var(--panel);padding:6px 18px;border-radius:3px;font-weight:700;
+    box-shadow:3px 3px 0 rgba(26,26,24,.13);}
+
+  /* seat grid 6x6 */
+  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;}
+  .seat{background:var(--panel);border:2px solid var(--ink);border-radius:6px;padding:6px 6px 7px;
+    display:flex;flex-direction:column;gap:5px;box-shadow:3px 3px 0 rgba(26,26,24,.13);position:relative;}
+  .seat-no{font-size:9px;color:var(--ink-soft);font-weight:600;letter-spacing:.05em;padding-left:2px;}
+
+  .reel{height:var(--rowh);overflow:hidden;border:2px solid var(--ink);border-radius:4px;background:var(--panel);
+    position:relative;box-shadow:inset 0 6px 7px -7px rgba(0,0,0,.5), inset 0 -6px 7px -7px rgba(0,0,0,.5);}
+  .reel-strip{will-change:transform;}
+  .tile{height:var(--rowh);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:var(--panel);color:var(--ink);line-height:1.15;}
+  .tile .nm{font-weight:700;font-size:15px;}
+  .tile .nu{font-size:9px;color:var(--ink-soft);font-weight:500;}
+  .tile.ph .nm{color:var(--ink-soft);font-weight:600;}
+  .seat.locked{background:var(--lime);}
+  .seat.locked .reel{animation:lock .36s ease;}
+  @keyframes lock{0%{transform:scale(1);}45%{transform:scale(1.06);box-shadow:0 0 0 4px var(--lime);}100%{transform:scale(1);}}
+
+  footer{margin-top:40px;font-size:12px;color:var(--ink-soft);border-top:1.5px solid var(--ink);
+    padding-top:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  @media(max-width:720px){.grid{grid-template-columns:repeat(4,1fr);} :root{--rowh:48px;}}
+  @media(max-width:480px){.grid{grid-template-columns:repeat(3,1fr);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">CLASSROOM · SEAT ASSIGNMENT</div>
+      <h1 class="serif">자리 배치</h1>
+    </div>
+    <div class="date" id="today"></div>
+  </header>
+
+  <div class="controls">
+    <button class="btn" id="startBtn">자리 배치 시작</button>
+    <button class="btn ghost" id="copyBtn" disabled>결과 복사</button>
+    <span class="seg-label">속도</span>
+    <div class="seg" id="speedSeg">
+      <button data-sp="normal" class="on">보통</button>
+      <button data-sp="fast">빠르게</button>
+      <button data-sp="instant">한번에</button>
+    </div>
+    <button class="btn ghost" id="muteBtn" title="소리 켜기/끄기" style="padding:12px 15px;">🔊</button>
+  </div>
+  <div class="status" id="status">36명을 6×6 자리에 무작위로 배치합니다 · 버튼을 눌러 시작하세요</div>
+
+  <div class="front"><span class="bar"></span><span class="lbl">칠판 · 앞</span><span class="bar"></span></div>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    <span>자리는 매번 무작위로 새로 추첨됩니다. 위쪽이 교실 앞(칠판)입니다.</span>
+    <span id="copiedMsg"></span>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   ▼ 편집 영역 — 명단은 여기서 바로 수정 (총 36명 = 6×6)
+   ============================================================ */
+const STUDENTS = [
+  ['강태양','10201'],['고서윤','10202'],['김건우','10203'],['김민준','10204'],
+  ['김영기','10205'],['김영일','10206'],['김재원','10207'],['박가온','10208'],
+  ['박건희','10209'],['박성빈','10210'],['박성현','10211'],['서용석','10212'],
+  ['선종연','10213'],['송범준','10214'],['송치수','10215'],['안철진','10216'],
+  ['이은찬','10217'],['이장범','10218'],['이정민','10219'],['이준서','10220'],
+  ['이지성','10221'],['이태성','10222'],['장영준','10223'],['장현규','10224'],
+  ['전세호','10225'],['정규용','10226'],['정기헌','10227'],['정주헌','10228'],
+  ['정지운','10229'],['주수영','10230'],['차민오','10231'],['한수완','10232'],
+  ['한준익','10233'],['홍성준','10234'],['홍준보','10235'],['황연우','10236'],
+].map(([name,num])=>({name,num}));
+/* ============================================================ ▲ 편집 영역 끝 ============================================================ */
+
+const COLS = 6, ROWS = 6, SEATS = COLS*ROWS;
+const SPEEDS = { normal:{dur:1700,step:45}, fast:{dur:850,step:22}, instant:{dur:260,step:5} };
+let speed = SPEEDS.normal;
+
+const ROWH = 52, FILLERS = 22;
+const STRIP_LEN = FILLERS + 2;                 // placeholder + fillers + target
+const $ = id => document.getElementById(id);
+let running=false, lastAssign=null;
+
+/* ── 틱 사운드 엔진 (Web Audio 합성) ─────────────────────── */
+let actx=null, tickBuf=null, comp=null, muted=false;
+
+function makeTick(ctx){
+  const SR=ctx.sampleRate, len=Math.floor(SR*0.018);
+  const buf=ctx.createBuffer(1,len,SR);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++){
+    const env=Math.pow(1-i/len,2.8);
+    const noise=(Math.random()*2-1)*0.55;
+    const tone=Math.sin(2*Math.PI*i*3200/SR)*0.45;
+    d[i]=(noise+tone)*env;
+  }
+  return buf;
+}
+
+let masterGain=null;
+async function initAudio(){
+  if(!actx){
+    actx = new (window.AudioContext||window.webkitAudioContext)();
+    comp = actx.createDynamicsCompressor();
+    comp.threshold.value=-18; comp.ratio.value=16;
+    comp.attack.value=0.0005; comp.release.value=0.06;
+    comp.knee.value=4;
+    masterGain = actx.createGain();
+    masterGain.gain.value = 0.55;
+    comp.connect(masterGain); masterGain.connect(actx.destination);
+    tickBuf = makeTick(actx);
+  }
+  if(actx.state==='suspended'){ try{ await actx.resume(); }catch(e){} }
+}
+
+function playTick(time, gain, rate){
+  if(muted || !tickBuf || !actx) return;
+  const src=actx.createBufferSource(); src.buffer=tickBuf; src.playbackRate.value=rate||1;
+  const g=actx.createGain(); g.gain.value=gain;
+  src.connect(g); g.connect(comp); src.start(time);
+}
+
+const _bz=(a,b,s)=>{const u=1-s;return 3*u*u*s*a+3*u*s*s*b+s*s*s;};
+const bezX=s=>_bz(.04,.18,s), bezY=s=>_bz(.78,1,s);
+function invY(target){let lo=0,hi=1,s=.5;for(let i=0;i<32;i++){s=(lo+hi)/2;(bezY(s)<target)?lo=s:hi=s;}return s;}
+
+function scheduleReelTicks(ctxStart, delay, dur){
+  if(muted || !actx) return;
+  const N=STRIP_LEN-1, minGap=0.022; let last=-1;
+  for(let k=1;k<=N;k++){
+    const s=invY(k/N), u=bezX(s);
+    const t=ctxStart + delay/1000 + u*dur/1000;
+    const isLast=(k===N);
+    const dynamicGap = isLast ? 0 : Math.max(0.018, minGap*(1-u*0.5));
+    if(!isLast && t < last+dynamicGap) continue;
+    last=t;
+    playTick(t, isLast?0.32:0.12, isLast?0.72:1.1);
+  }
+}
+
+$('today').textContent = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+
+// build seat grid
+const grid = $('grid');
+for(let i=0;i<SEATS;i++){
+  const seat=document.createElement('div');
+  seat.className='seat';
+  seat.dataset.seat=i;
+  seat.innerHTML=`<div class="seat-no">${i+1}번 자리</div>`
+    +`<div class="reel"><div class="reel-strip" id="strip-${i}"><div class="tile ph"><span class="nm">?</span></div></div></div>`;
+  grid.appendChild(seat);
+}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function nameTile(stu){ return `<div class="tile"><span class="nm">${stu.name}</span><span class="nu">${stu.num}</span></div>`; }
+function buildStrip(target){
+  let h = `<div class="tile ph"><span class="nm">?</span></div>`;
+  for(let i=0;i<FILLERS;i++) h += nameTile(STUDENTS[(Math.random()*STUDENTS.length)|0]);
+  h += nameTile(target);
+  return h;
+}
+
+async function run(){
+  if(running) return;
+  running=true;
+  $('startBtn').disabled=true; $('copyBtn').disabled=true; $('copiedMsg').textContent='';
+  $('status').innerHTML='자리 추첨 중…';
+  document.querySelectorAll('.seat.locked').forEach(c=>c.classList.remove('locked'));
+  await initAudio();
+  const ctxStart = actx ? actx.currentTime + 0.03 : 0;
+
+  // 학생을 자리에 무작위 배정
+  const pool = shuffle(STUDENTS.slice());
+  lastAssign = pool.map((stu,i)=>({stu, seat:i}));
+
+  let maxEnd=0;
+  lastAssign.forEach(({stu,seat},k)=>{
+    const strip=$('strip-'+seat);
+    strip.style.transition='none';
+    strip.style.transform='translateY(0)';
+    strip.innerHTML=buildStrip(stu);
+    void strip.offsetHeight;                       // reflow
+    const delay=k*speed.step, dur=speed.dur, end=delay+dur;
+    strip.style.transition=`transform ${dur}ms cubic-bezier(.12,.62,.2,1) ${delay}ms`;
+    strip.style.transform=`translateY(${-(STRIP_LEN-1)*ROWH}px)`;
+    scheduleReelTicks(ctxStart, delay, dur);
+    setTimeout(()=>strip.closest('.seat').classList.add('locked'), end);
+    maxEnd=Math.max(maxEnd,end);
+  });
+
+  setTimeout(finish, maxEnd+140);
+}
+
+function finish(){
+  $('status').innerHTML=`<b>자리 배치 완료!</b> 총 ${SEATS}자리 · ${STUDENTS.length}명`;
+  $('startBtn').disabled=false; $('startBtn').textContent='다시 배치';
+  $('copyBtn').disabled=false;
+  running=false;
+  burstConfetti();
+}
+
+function resultText(){
+  let lines=['자리 배치 결과 ('+COLS+'×'+ROWS+')','앞 (칠판) ↑','─────────────'];
+  const bySeat=Object.fromEntries(lastAssign.map(a=>[a.seat,a.stu]));
+  for(let r=0;r<ROWS;r++){
+    const row=[];
+    for(let c=0;c<COLS;c++){
+      const stu=bySeat[r*COLS+c];
+      row.push(stu?stu.name:'-');
+    }
+    lines.push(row.join(' | '));
+  }
+  return lines.join('\n');
+}
+
+$('startBtn').addEventListener('click', run);
+$('copyBtn').addEventListener('click', async()=>{
+  try{ await navigator.clipboard.writeText(resultText()); $('copiedMsg').textContent='✓ 결과가 복사되었습니다'; }
+  catch(e){ $('copiedMsg').textContent='복사 실패 — 직접 선택해 복사하세요'; }
+});
+$('speedSeg').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b||running) return;
+  [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); speed=SPEEDS[b.dataset.sp];
+});
+$('muteBtn').addEventListener('click', ()=>{
+  muted=!muted; $('muteBtn').textContent = muted ? '🔇' : '🔊';
+});
+
+function burstConfetti(){
+  const c=document.createElement('canvas');
+  c.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:9999;';
+  document.body.appendChild(c);
+  const ctx=c.getContext('2d'), dpr=window.devicePixelRatio||1;
+  c.width=innerWidth*dpr; c.height=innerHeight*dpr; ctx.scale(dpr,dpr);
+  const cols=['#DDEB5A','#F2E8D0','#1A1A18','#B7C73E','#ffffff','#BFD7D6'];
+  const P=Array.from({length:170},()=>({x:Math.random()*innerWidth,y:-20-Math.random()*innerHeight*0.4,
+    r:5+Math.random()*8,col:cols[(Math.random()*cols.length)|0],vy:2.4+Math.random()*4.2,
+    vx:-2.4+Math.random()*4.8,rot:Math.random()*6.28,vr:-0.22+Math.random()*0.44}));
+  const t0=performance.now();
+  (function f(t){const el=t-t0;ctx.clearRect(0,0,innerWidth,innerHeight);
+    P.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.05;p.rot+=p.vr;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.col;
+      ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*0.62);ctx.restore();});
+    if(el<3200)requestAnimationFrame(f);else c.remove();})(t0);
+}
+</script>
+</body>
+</html>
