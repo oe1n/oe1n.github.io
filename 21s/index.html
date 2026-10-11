@@ -130,6 +130,28 @@ const STUDENTS = [
 /* ============================================================ ▲ 편집 영역 끝 ============================================================ */
 
 const COLS = 6, ROWS = 6, SEATS = COLS*ROWS;
+
+/* ── 특수 케이스: N번째 추첨 → { 학번: 자리 인덱스(0부터) } ──
+   자리 인덱스 = (줄-1)*6 + (칸-1)                                  */
+const SPECIAL = {
+  3: { '10211': 24,   // 5번째 줄, 맨 왼쪽        (25번 자리)
+       '10210': 25 }, // 5번째 줄, 왼쪽에서 2번째 (26번 자리)
+};
+let drawCount = 0;
+
+function buildAssignment(n){
+  const fixed = SPECIAL[n] || {};
+  const seats = new Array(SEATS).fill(null);
+  const rest = [];
+  STUDENTS.forEach(s=>{
+    if(fixed[s.num] !== undefined) seats[fixed[s.num]] = s;
+    else rest.push(s);
+  });
+  shuffle(rest);
+  for(let i=0;i<SEATS;i++) if(!seats[i]) seats[i] = rest.pop();
+  return seats;
+}
+
 const SPEEDS = { normal:{dur:1700,step:45}, fast:{dur:850,step:22}, instant:{dur:260,step:5} };
 let speed = SPEEDS.normal;
 
@@ -227,8 +249,9 @@ async function run(){
   await initAudio();
   const ctxStart = actx ? actx.currentTime + 0.03 : 0;
 
-  // 학생을 자리에 무작위 배정
-  const pool = shuffle(STUDENTS.slice());
+  // 학생을 자리에 무작위 배정 (특수 케이스 반영)
+  drawCount++;
+  const pool = buildAssignment(drawCount);
   lastAssign = pool.map((stu,i)=>({stu, seat:i}));
 
   let maxEnd=0;
