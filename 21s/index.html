@@ -98,7 +98,6 @@
       <button data-sp="fast">빠르게</button>
       <button data-sp="instant">한번에</button>
     </div>
-    <button class="btn ghost" id="muteBtn" title="소리 켜기/끄기" style="padding:12px 15px;">🔊</button>
   </div>
   <div class="status" id="status">36명을 6×6 자리에 무작위로 배치합니다 · 버튼을 눌러 시작하세요</div>
 
@@ -160,63 +159,6 @@ const STRIP_LEN = FILLERS + 2;                 // placeholder + fillers + target
 const $ = id => document.getElementById(id);
 let running=false, lastAssign=null;
 
-/* ── 틱 사운드 엔진 (Web Audio 합성) ─────────────────────── */
-let actx=null, tickBuf=null, comp=null, muted=false;
-
-function makeTick(ctx){
-  const SR=ctx.sampleRate, len=Math.floor(SR*0.018);
-  const buf=ctx.createBuffer(1,len,SR);
-  const d=buf.getChannelData(0);
-  for(let i=0;i<len;i++){
-    const env=Math.pow(1-i/len,2.8);
-    const noise=(Math.random()*2-1)*0.55;
-    const tone=Math.sin(2*Math.PI*i*3200/SR)*0.45;
-    d[i]=(noise+tone)*env;
-  }
-  return buf;
-}
-
-let masterGain=null;
-async function initAudio(){
-  if(!actx){
-    actx = new (window.AudioContext||window.webkitAudioContext)();
-    comp = actx.createDynamicsCompressor();
-    comp.threshold.value=-18; comp.ratio.value=16;
-    comp.attack.value=0.0005; comp.release.value=0.06;
-    comp.knee.value=4;
-    masterGain = actx.createGain();
-    masterGain.gain.value = 0.55;
-    comp.connect(masterGain); masterGain.connect(actx.destination);
-    tickBuf = makeTick(actx);
-  }
-  if(actx.state==='suspended'){ try{ await actx.resume(); }catch(e){} }
-}
-
-function playTick(time, gain, rate){
-  if(muted || !tickBuf || !actx) return;
-  const src=actx.createBufferSource(); src.buffer=tickBuf; src.playbackRate.value=rate||1;
-  const g=actx.createGain(); g.gain.value=gain;
-  src.connect(g); g.connect(comp); src.start(time);
-}
-
-const _bz=(a,b,s)=>{const u=1-s;return 3*u*u*s*a+3*u*s*s*b+s*s*s;};
-const bezX=s=>_bz(.04,.18,s), bezY=s=>_bz(.78,1,s);
-function invY(target){let lo=0,hi=1,s=.5;for(let i=0;i<32;i++){s=(lo+hi)/2;(bezY(s)<target)?lo=s:hi=s;}return s;}
-
-function scheduleReelTicks(ctxStart, delay, dur){
-  if(muted || !actx) return;
-  const N=STRIP_LEN-1, minGap=0.022; let last=-1;
-  for(let k=1;k<=N;k++){
-    const s=invY(k/N), u=bezX(s);
-    const t=ctxStart + delay/1000 + u*dur/1000;
-    const isLast=(k===N);
-    const dynamicGap = isLast ? 0 : Math.max(0.018, minGap*(1-u*0.5));
-    if(!isLast && t < last+dynamicGap) continue;
-    last=t;
-    playTick(t, isLast?0.32:0.12, isLast?0.72:1.1);
-  }
-}
-
 $('today').textContent = new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
 
 // build seat grid
@@ -240,14 +182,12 @@ function buildStrip(target){
   return h;
 }
 
-async function run(){
+function run(){
   if(running) return;
   running=true;
   $('startBtn').disabled=true; $('copyBtn').disabled=true; $('copiedMsg').textContent='';
   $('status').innerHTML='자리 추첨 중…';
   document.querySelectorAll('.seat.locked').forEach(c=>c.classList.remove('locked'));
-  await initAudio();
-  const ctxStart = actx ? actx.currentTime + 0.03 : 0;
 
   // 학생을 자리에 무작위 배정 (특수 케이스 반영)
   drawCount++;
@@ -264,7 +204,6 @@ async function run(){
     const delay=k*speed.step, dur=speed.dur, end=delay+dur;
     strip.style.transition=`transform ${dur}ms cubic-bezier(.12,.62,.2,1) ${delay}ms`;
     strip.style.transform=`translateY(${-(STRIP_LEN-1)*ROWH}px)`;
-    scheduleReelTicks(ctxStart, delay, dur);
     setTimeout(()=>strip.closest('.seat').classList.add('locked'), end);
     maxEnd=Math.max(maxEnd,end);
   });
@@ -303,9 +242,6 @@ $('speedSeg').addEventListener('click', e=>{
   const b=e.target.closest('button'); if(!b||running) return;
   [...e.currentTarget.children].forEach(x=>x.classList.remove('on'));
   b.classList.add('on'); speed=SPEEDS[b.dataset.sp];
-});
-$('muteBtn').addEventListener('click', ()=>{
-  muted=!muted; $('muteBtn').textContent = muted ? '🔇' : '🔊';
 });
 
 function burstConfetti(){
